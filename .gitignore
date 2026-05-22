@@ -1,0 +1,39 @@
+# Build outputs
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+coverage.xml
+*.prof
+*.trace
+
+# Runtime / local data
+/var/
+/tmp/
+/.themis/
+/tenants/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+events.jsonl
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Dependencies (will appear once code lands)
+/node_modules/
+/vendor/
+
+# Local config / secrets
+.env
+.env.local
+config.local.yaml
+*.pem
+*.key
