@@ -72,3 +72,33 @@ func (p *Projection) migrate() error {
 	}
 	return nil
 }
+
+// Project records e in the projection. It is idempotent (same content_hash
+// twice = single row). Project refuses kinds not present in registry —
+// this is the wiring guard that prevents the default-case-eats-events bug.
+func (p *Projection) Project(e Event, registry *Registry) error {
+	projector, ok := registry.Projector(e.Kind)
+	if !ok {
+		return fmt.Errorf("ledger: unknown event kind %q (every kind must be registered in DefaultRegistry)", e.Kind)
+	}
+	hash, err := e.ContentHash()
+	if err != nil {
+		return fmt.Errorf("content hash: %w", err)
+	}
+	// Idempotent insert keyed by content_hash UNIQUE constraint.
+	_, err = p.db.Exec(
+		`INSERT OR IGNORE INTO events (kind, tenant, ts, prev_hash, content_hash, payload)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+		e.Kind, e.Tenant, e.Timestamp.UTC().Format(timeFormat), e.PrevHash, hash, []byte(e.Payload),
+	)
+	if err != nil {
+		return fmt.Errorf("project insert: %w", err)
+	}
+	// Run the kind-specific projector (currently noop for Plan 1 kinds).
+	if err := projector([]byte(e.Payload)); err != nil {
+		return fmt.Errorf("projector %q: %w", e.Kind, err)
+	}
+	return nil
+}
+
+const timeFormat = "2006-01-02T15:04:05.999999999Z07:00"
