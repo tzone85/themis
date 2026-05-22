@@ -81,3 +81,25 @@ func TestInit_TenantsCannotEscapeBase(t *testing.T) {
 		t.Fatalf("Root() lost the tenant id: %q", bad.Root())
 	}
 }
+
+func TestTenant_DistinctIDsAlwaysGetDistinctRoots(t *testing.T) {
+	base := t.TempDir()
+	a, err := New(base, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := New(base, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if a.Root() == b.Root() {
+		t.Fatal("distinct tenants share a root path")
+	}
+	if strings.HasPrefix(a.Root(), b.Root()+string(filepath.Separator)) {
+		t.Fatal("tenant a's root is nested under tenant b's root")
+	}
+	if strings.HasPrefix(b.Root(), a.Root()+string(filepath.Separator)) {
+		t.Fatal("tenant b's root is nested under tenant a's root")
+	}
+}
