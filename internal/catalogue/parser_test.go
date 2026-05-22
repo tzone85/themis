@@ -1,6 +1,8 @@
 package catalogue
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -75,5 +77,126 @@ func TestParse_MissingRootReturnsEmpty(t *testing.T) {
 	}
 	if len(g.Domains) != 0 || len(g.Services) != 0 || len(g.Events) != 0 {
 		t.Errorf("expected empty graph, got %+v", g)
+	}
+}
+
+// writeCatalogue lays down a minimal valid catalogue tree at root, then
+// applies the supplied mutator so individual tests can break exactly one
+// thing.
+func writeCatalogue(t *testing.T, root string, mutate func(root string)) {
+	t.Helper()
+	for _, p := range []string{"domains/D1", "services/s1", "events/E1"} {
+		if err := os.MkdirAll(filepath.Join(root, p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mustWrite := func(rel, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, rel), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mustWrite("domains/D1/index.md", "---\nid: D1\nname: D1\n---\n")
+	mustWrite("services/s1/index.md", "---\nid: s1\nname: s1\ndomain: D1\nproduces:\n  - E1\n---\n")
+	mustWrite("events/E1/index.md", "---\nid: E1\nname: E1\ndomain: D1\nversion: \"1.0.0\"\n---\n")
+	if mutate != nil {
+		mutate(root)
+	}
+}
+
+func TestParse_RejectsMissingLeadingDelimiter(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "services/s1/index.md"),
+			[]byte("id: s1\nname: s1\n"), 0o600) // no '---'
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject service missing front-matter delimiter")
+	}
+}
+
+func TestParse_RejectsMissingClosingDelimiter(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "events/E1/index.md"),
+			[]byte("---\nid: E1\nname: E1\nno closing delim\n"), 0o600)
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject event missing closing delimiter")
+	}
+}
+
+func TestParse_RejectsInvalidYAML(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "events/E1/index.md"),
+			[]byte("---\nid: : :\n: nope\n---\n"), 0o600)
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject broken YAML front-matter")
+	}
+}
+
+func TestParse_RejectsDuplicateEventID(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.MkdirAll(filepath.Join(root, "events/E1_dup"), 0o755)
+		_ = os.WriteFile(filepath.Join(root, "events/E1_dup/index.md"),
+			[]byte("---\nid: E1\nname: E1_dup\ndomain: D1\n---\n"), 0o600)
+	})
+	_, err := Parse(root)
+	if err == nil {
+		t.Fatal("Parse should reject duplicate event ID")
+	}
+	if !errors.Is(err, ErrDuplicateID) {
+		t.Fatalf("error %v should wrap ErrDuplicateID", err)
+	}
+}
+
+func TestParse_RejectsServiceConsumingUnknownEvent(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "services/s1/index.md"),
+			[]byte("---\nid: s1\nname: s1\ndomain: D1\nconsumes:\n  - PHANTOM_EVENT\n---\n"), 0o600)
+	})
+	_, err := Parse(root)
+	if err == nil {
+		t.Fatal("Parse should reject service consuming unknown event")
+	}
+	if !errors.Is(err, ErrMissingReference) {
+		t.Fatalf("error %v should wrap ErrMissingReference", err)
+	}
+}
+
+func TestParse_RejectsDomainMissingID(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "domains/D1/index.md"),
+			[]byte("---\nname: \"D1 (no id)\"\n---\n"), 0o600)
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject domain without id")
+	}
+}
+
+func TestParse_RejectsServiceMissingID(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "services/s1/index.md"),
+			[]byte("---\nname: nameless\ndomain: D1\n---\n"), 0o600)
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject service without id")
+	}
+}
+
+func TestParse_RejectsEventMissingID(t *testing.T) {
+	root := t.TempDir()
+	writeCatalogue(t, root, func(root string) {
+		_ = os.WriteFile(filepath.Join(root, "events/E1/index.md"),
+			[]byte("---\nname: nameless\ndomain: D1\n---\n"), 0o600)
+	})
+	if _, err := Parse(root); err == nil {
+		t.Fatal("Parse should reject event without id")
 	}
 }
