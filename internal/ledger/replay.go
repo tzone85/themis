@@ -39,3 +39,26 @@ func Replay(storePath, projPath string, registry *Registry) error {
 	}
 	return nil
 }
+
+// Verify walks the JSONL ledger and asserts the Merkle chain is intact.
+// Returns nil if every event's PrevHash matches the prior event's content hash
+// (or ZeroHash for the first), and every event hashes to a stable value.
+func Verify(storePath string) error {
+	events, err := ReadAll(storePath)
+	if err != nil {
+		return fmt.Errorf("read: %w", err)
+	}
+	prev := ZeroHash
+	for i, e := range events {
+		if e.PrevHash != prev {
+			return fmt.Errorf("ledger: chain break at event %d (%s): prev_hash=%q, expected=%q",
+				i, e.Kind, e.PrevHash, prev)
+		}
+		h, err := e.ContentHash()
+		if err != nil {
+			return fmt.Errorf("ledger: hash event %d: %w", i, err)
+		}
+		prev = h
+	}
+	return nil
+}
