@@ -30,7 +30,7 @@ func Replay(storePath, projPath string, registry *Registry) error {
 	if err != nil {
 		return fmt.Errorf("open projection: %w", err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 
 	for i, e := range events {
 		if err := p.Project(e, registry); err != nil {

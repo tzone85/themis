@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
@@ -13,18 +15,27 @@ linters:
     - unconvert
     - unused
 
-linters-settings:
-  revive:
-    rules:
-      - name: var-naming
-      - name: exported
-      - name: package-comments
-  gosec:
-    excludes:
-      - G104  # errcheck handles this; gosec double-reports
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+        - name: exported
+        - name: package-comments
+    gosec:
+      excludes:
+        - G104  # errcheck handles this; gosec double-reports
+        - G304  # file paths come from validated Tenant.Events()/Projection() calls.
 
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec  # tests use t.TempDir() and similar; gosec false-positives.
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec     # tests use t.TempDir() and similar; gosec false-positives.
+          - errcheck  # tests intentionally discard Close() errors in defer.
+      - path: cmd/themis/main\.go
+        linters:
+          - revive   # package-main comment is conventionally omitted for entry points.
+      - path: internal/ledger/store\.go
+        text: "Error return value of `f.Close` is not checked"
+        linters:
+          - errcheck   # ReadAll's deferred close: read-only file, error has no actionable handler.

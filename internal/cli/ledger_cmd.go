@@ -60,7 +60,7 @@ func newLedgerVerifyCmd() *cobra.Command {
 			if err := ledger.Verify(events); err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "ledger: chain intact")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "ledger: chain intact")
 			return nil
 		},
 	}
