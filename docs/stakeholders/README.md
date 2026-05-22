@@ -9,7 +9,7 @@ All Themis documents (design spec + audience-specific briefs) live together unde
 - A **compliance / risk** stakeholder → [Compliance brief](../superpowers/specs/2026-05-22-themis-compliance-brief.md)
 - An **engineering lead** → [Engineering brief](../superpowers/specs/2026-05-22-themis-engineering-brief.md)
 - A **security / AppSec** stakeholder → [Security brief](../superpowers/specs/2026-05-22-themis-security-brief.md)
-- A **Sanlam Digisure** decision-maker → [Sanlam pilot proposal](../superpowers/specs/2026-05-22-themis-sanlam-pilot-proposal.md)
+- An **anchor-pilot decision-maker** → [Anchor pilot proposal](../superpowers/specs/2026-05-22-themis-anchor-pilot-proposal.md)
 
 ## Reference
 - Full design specification → [`2026-05-22-themis-design.md`](../superpowers/specs/2026-05-22-themis-design.md)
@@ -23,6 +23,6 @@ All Themis documents (design spec + audience-specific briefs) live together unde
 | Compliance brief | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
 | Engineering brief | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
 | Security brief | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
-| Sanlam pilot proposal | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
+| Anchor pilot proposal | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
 
 All drafts are intended to be updated as feedback comes in. Each brief is < 10 minutes' reading time on its own.

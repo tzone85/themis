@@ -14,14 +14,14 @@ Our teams want to use AI coding tools (Claude Code, Cursor, Copilot, internal ag
 Existing tools (SLSA, in-toto, GitHub Advanced Security, generic AI scanners) describe *build* provenance or flag generic vulnerabilities. None of them know our event catalogue, none of them gate by contract impact, none of them generate a signed AI-specific audit packet. Themis does. It also runs entirely inside our infrastructure — no third-party data exposure.
 
 ## Why now
-- We already run EventCatalog (Digisure).
+- The anchor pilot organisation already runs EventCatalog at the business-unit level.
 - We already run an event-sourced AI orchestrator (VXD), which is 70% of the storage substrate Themis needs.
 - Regulators (SA + EU) are formalising AI-system audit expectations; we can either lead with a defensible posture or react when asked.
 
 ## Cost
 - **People:** one engineer (Thando Mini) + AI pair for 12 weeks.
 - **Infrastructure:** one self-hosted Go binary + one SQLite file per tenant. No external SaaS dependency. No per-seat licensing.
-- **Pilot:** one Digisure squad, 90 days, no external software spend.
+- **Pilot:** one the anchor pilot organisation squad, 90 days, no external software spend.
 
 ## Risk
 - **Pilot risk:** policies need tuning; mitigated by three starter templates and a weekly review with compliance sponsor.
@@ -29,8 +29,8 @@ Existing tools (SLSA, in-toto, GitHub Advanced Security, generic AI scanners) de
 - **Adoption risk:** if Themis adds noticeable latency, devs route around it. Mitigated by a hard p95 < 2s target enforced in CI; latency dashboard visible to the team.
 
 ## Decision asked
-1. **Endorse a 90-day pilot** with one Digisure squad.
-2. **Name a compliance sponsor** (target: Digisure compliance / risk lead) and an **engineering sponsor** (target: pilot squad tech lead).
+1. **Endorse a 90-day pilot** with one the anchor pilot organisation squad.
+2. **Name a compliance sponsor** (target: the anchor pilot organisation compliance / risk lead) and an **engineering sponsor** (target: pilot squad tech lead).
 3. **Approve internal data-handling addendum** (default: prompt hashes stored, verbatim text opt-in; PII redacted in stored findings).
 4. **Decide IP / open-source posture**: EventCatalog plugin is intended Apache 2.0; Themis Core is open-core vs. closed-source — your call.
 
@@ -48,7 +48,7 @@ Existing tools (SLSA, in-toto, GitHub Advanced Security, generic AI scanners) de
 - Compliance brief: [`2026-05-22-themis-compliance-brief.md`](2026-05-22-themis-compliance-brief.md)
 - Engineering brief: [`2026-05-22-themis-engineering-brief.md`](2026-05-22-themis-engineering-brief.md)
 - Security brief: [`2026-05-22-themis-security-brief.md`](2026-05-22-themis-security-brief.md)
-- Sanlam pilot proposal: [`2026-05-22-themis-sanlam-pilot-proposal.md`](2026-05-22-themis-sanlam-pilot-proposal.md)
+- Anchor pilot proposal: [`2026-05-22-themis-anchor-pilot-proposal.md`](2026-05-22-themis-anchor-pilot-proposal.md)
 - Glossary + FAQ: in the full design spec (§14, §15).
 
 **Author:** Thando Mini · 2026-05-22 · Pre-pilot draft for internal review.

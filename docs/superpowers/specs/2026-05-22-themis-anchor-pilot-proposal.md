@@ -1,59 +1,61 @@
-# Themis — Sanlam Digisure Pilot Proposal
+# Themis — Anchor Pilot Proposal
 
-**For:** Sanlam Digisure leadership · compliance · risk · platform engineering.
+**For:** Anchor pilot organisation's leadership · compliance · risk · platform engineering.
 **Status:** Draft — for internal stakeholder review.
 **Date:** 2026-05-22.
+
+> **Note on identifying information.** This document is intentionally written as a generic template. When approaching a specific anchor pilot organisation, replace the bracketed placeholders below (`[ORG]`, `[BUSINESS UNIT]`, `[DOMAIN-A / DOMAIN-B / DOMAIN-C]`) with the named values. The plan, exit criteria, costs, and risk profile are otherwise unchanged.
 
 ---
 
 ## 1. The ask
 
-Endorse a **90-day, single-squad pilot** of Themis in Sanlam Digisure to evaluate whether it materially improves our ability to safely adopt AI coding tools at scale.
+Endorse a **90-day, single-squad pilot** of Themis in `[ORG]` to evaluate whether it materially improves the organisation's ability to safely adopt AI coding tools at scale.
 
 Specifically:
 - One pilot squad (to be named in week 1).
 - One named compliance sponsor.
 - One named engineering sponsor.
-- Themis deployed inside Sanlam infrastructure (self-hosted; one Go binary; one SQLite file per tenant; no external SaaS).
+- Themis deployed inside `[ORG]` infrastructure (self-hosted; one Go binary; one SQLite file per tenant; no external SaaS).
 - Existing tools (Claude Code, Cursor, GitHub, EventCatalog) unchanged.
 - Defined exit criteria (see §5).
 
 ## 2. The problem we're trying to solve
 
-Sanlam Digisure engineers use AI coding tools today. Sanlam's compliance and risk posture is — appropriately — conservative about AI involvement in customer-facing or regulated code. The pragmatic outcome is one of:
+`[ORG]` engineers use AI coding tools today. The organisation's compliance and risk posture is — appropriately — conservative about AI involvement in customer-facing or regulated code. The pragmatic outcome is one of:
 
 - **Engineers self-censor** ("don't use AI for anything important") and lose productivity, or
-- **Engineers use AI freely** and we lose the audit trail at PR merge time.
+- **Engineers use AI freely** and the organisation loses the audit trail at PR merge time.
 
-Neither is sustainable. The industry is converging on AI-assisted engineering. We need a defensible, auditable, repeatable answer that does not depend on individual discipline.
+Neither is sustainable. The industry is converging on AI-assisted engineering. A defensible, auditable, repeatable answer is needed — one that does not depend on individual discipline.
 
 ## 3. The proposal: Themis
 
 A self-hosted compliance gateway that:
-- Plugs into Sanlam's existing tools — EventCatalog (already deployed in Digisure), GitHub, Claude Code / Cursor / Copilot, VXD (internal agent orchestrator).
+- Plugs into `[ORG]`'s existing tools — EventCatalog (already in use by `[BUSINESS UNIT]`), GitHub, Claude Code / Cursor / Copilot, and any internal AI orchestrators.
 - Records every AI-touched change with full provenance: which AI, which prompt (hashed by default), which model version, which scanner findings, which human reviewers and approvers.
-- Evaluates each change against policies we author in plain YAML; routine work flows automatically, contract-affecting work pauses for explicit sign-off.
+- Evaluates each change against policies authored in plain YAML; routine work flows automatically, contract-affecting work pauses for explicit sign-off.
 - Produces a signed audit packet per PR that any external auditor can ingest and verify offline.
 - Detects bypass attempts (missing CI check, ledger tampering, missing approval co-signs).
-- Runs entirely inside Sanlam infrastructure (no third-party data exposure).
+- Runs entirely inside `[ORG]` infrastructure (no third-party data exposure).
 
 See the full design at [`2026-05-22-themis-design.md`](2026-05-22-themis-design.md).
 
 ## 4. The 90-day pilot
 
 ### Phase 1 — Alignment (weeks 1–2)
-- Identify pilot squad (Digisure team with active AI-tool usage; current candidates: any squad in CapstonePAS, Collections, or Trustflow domains).
-- Identify compliance sponsor (target: Digisure compliance / risk lead, ~1 hour/week commitment).
+- Identify pilot squad (a `[BUSINESS UNIT]` team with active AI-tool usage; current candidates: any squad in `[DOMAIN-A]`, `[DOMAIN-B]`, or `[DOMAIN-C]`).
+- Identify compliance sponsor (target: `[BUSINESS UNIT]` compliance / risk lead, ~1 hour/week commitment).
 - Identify engineering sponsor (target: pilot squad tech lead, ~2 hours/week commitment for the first 4 weeks, less thereafter).
 - Confirm AI-tool inventory (which adapters we need).
 - Sign internal data-handling addendum (prompt hashes default; verbatim text opt-in; PII redaction).
 - Confirm EventCatalog access (read-only; we mirror, we don't write back at MVP).
-- Decide hosting (Sanlam-internal VM preferred over Themis-managed) and infra request raised.
+- Decide hosting (organisation-internal VM preferred over Themis-managed) and infra request raised.
 
 ### Phase 2 — Deployment (weeks 3–6)
-- Themis Core (single-tenant) deployed to Sanlam infra.
+- Themis Core (single-tenant) deployed to `[ORG]` infrastructure.
 - GitHub Action installed on pilot squad's primary repo(s); required-status-check added.
-- EventCatalog plugin installed in Digisure's EventCatalog instance (Apache-2.0 plugin; one `npm install` + one config line).
+- EventCatalog plugin installed in `[BUSINESS UNIT]`'s EventCatalog instance (Apache-2.0 plugin; one `npm install` + one config line).
 - Catalogue ingestion live; weekly auto-refresh.
 - Policy v1 co-authored by compliance + engineering sponsors using "Conservative" starter as the base; reviewed in week 5.
 - Web dashboard accessible to pilot team + compliance sponsor.
@@ -85,11 +87,11 @@ The pilot is **successful** if at week 12 all six are true:
 
 The pilot **fails** if any of:
 - Themis is the proximate cause of a production incident that would not have occurred without it.
-- The compliance sponsor's week 12 assessment concludes the audit artefact does not meet Sanlam's audit needs.
+- The compliance sponsor's week 12 assessment concludes the audit artefact does not meet the organisation's audit needs.
 - The engineering sponsor's week 12 assessment concludes the latency / FP rate is unsustainable.
 - A scanner produces a false-negative on a real secret / slopsquat / PII case discovered through other means.
 
-## 6. Cost (Sanlam side)
+## 6. Cost (anchor organisation side)
 
 | Item | Cost |
 |---|---|
@@ -100,11 +102,11 @@ The pilot **fails** if any of:
 | External software licensing | Zero. |
 | Cloud third-party data exposure | Zero (self-hosted; no outbound traffic if Sigstore disabled in favour of local key). |
 
-## 7. Cost (Thando + Themis side)
+## 7. Cost (Themis side)
 
 - ~12 weeks of focused engineering (1 engineer + AI pair).
 - All open-source dependencies (Go stdlib, Sigstore, Mempalace, EventCatalog v2).
-- Themis Core development happens outside Sanlam infra; only the deployed binary lands inside.
+- Themis Core development happens outside `[ORG]` infrastructure; only the deployed binary lands inside.
 
 ## 8. Risk
 
@@ -116,12 +118,12 @@ The pilot **fails** if any of:
 | Sigstore outage causes pile-up | Low | Medium | Fail-closed by design; local-key fallback configurable; documented as expected behaviour in playbook |
 | Pilot uncovers a deeper design issue | Medium | High | This is the *purpose* of the pilot. Evaluation phase explicitly captures it. |
 
-## 9. What changes for Sanlam Digisure at the end of the pilot
+## 9. What changes for the anchor organisation at the end of the pilot
 
 **If successful:**
 - A documented, defensible posture for AI-assisted engineering: "here is the policy we enforce, here is the audit trail we generate, here is the bypass detection we run."
-- A reusable Themis deployment that can extend to other Digisure squads, other Sanlam entities (SFT, Glue, etc.), or be offered to the broader Sanlam Group.
-- A position from which Sanlam can publish externally (board, regulators, customers) on its AI-engineering posture.
+- A reusable Themis deployment that can extend to other squads, other business units, or be offered to the broader parent organisation.
+- A position from which the organisation can publish externally (board, regulators, customers) on its AI-engineering posture.
 - A go-decision on expansion based on evidence.
 
 **If unsuccessful or partial:**
@@ -131,7 +133,7 @@ The pilot **fails** if any of:
 
 ## 10. What we ask for now
 
-1. **Sponsorship endorsement** from Sanlam Digisure leadership.
+1. **Sponsorship endorsement** from `[BUSINESS UNIT]` leadership.
 2. **Named compliance sponsor** (with their direct line manager's awareness of the time commitment).
 3. **Named engineering sponsor** (likewise).
 4. **Approval of the data-handling addendum** (default privacy-conservative settings).

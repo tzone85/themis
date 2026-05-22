@@ -64,7 +64,7 @@ For genuine emergencies (production incident, urgent merge), an emergency overri
 
 ## What we'd ask of you in the pilot
 
-1. **Be the named compliance sponsor** for one Digisure squad — one hour per week for 12 weeks.
+1. **Be the named compliance sponsor** for one anchor-organisation squad — one hour per week for 12 weeks.
 2. **Co-author the first policy** with the squad's tech lead, using one of our starter templates as a base.
 3. **Run a synthetic audit exercise** in week 10 — pretend you are an external auditor, ask the questions you would ask, and tell us whether the audit packet answers them.
 4. **Write the final assessment** in week 12: is the artefact sufficient to take into our next external audit cycle?
@@ -72,7 +72,7 @@ For genuine emergencies (production incident, urgent merge), an emergency overri
 ## What you walk away with at the end of 90 days
 
 - A documented, defensible AI-engineering posture.
-- A reusable policy template you can extend to other Digisure squads, other Sanlam entities, or other organisations entirely.
+- A reusable policy template you can extend to other squads in the anchor organisation, other entities in the parent group, or other organisations entirely.
 - A signed body of audit evidence covering every AI-touched PR for the squad's 90 days.
 - An explicit go/no-go on expansion, backed by evidence.
 

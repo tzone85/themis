@@ -12,7 +12,25 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 - 📄 **[Executive summary](docs/superpowers/specs/2026-05-22-themis-exec-summary.md)** — one page.
 - 📄 **[Full design specification](docs/superpowers/specs/2026-05-22-themis-design.md)** — the canonical artefact.
-- 📁 **[Stakeholder briefs index](docs/stakeholders/README.md)** — compliance, engineering, security, exec, Sanlam pilot proposal.
+- 📁 **[Stakeholder briefs index](docs/stakeholders/README.md)** — compliance, engineering, security, exec, anchor pilot proposal.
+
+## About the name
+
+**Themis** is the Greek personification of *divine law, order, and custom* — the principle that decisions follow rules, that the rules are knowable, and that outcomes can be measured against them. The mapping to this product is direct: AI-influenced code changes follow a stated policy, the policy is recorded, every decision is replayable, and the audit trail is independently verifiable. The iconography (Lady Justice with scales) lands instantly with compliance buyers without explanation.
+
+Three practical reasons the name earned its place:
+
+1. **Enterprise-credible without being cute.** Compliance, risk, and regulator audiences read the reference immediately; there's no "what does that mean?" gap to bridge.
+2. **One unambiguous pronunciation worldwide.** *THEE-miss.* Short to say, easy to spell, unlikely to mis-hear in a meeting.
+3. **Generalises across future modules.** If Themis grows beyond AI-coding governance into general AI-system runtime governance or broader change management, the name still fits. Submodules can take complementary mythological names (`Themis Gateway` = the policy engine, `Themis Ledger` = the AI-BOM store, `Themis Eye` = the dashboard) without forcing a rebrand.
+
+Rejected during naming (search-namespace collisions in our buyer space):
+- *Catalyst* — Cisco, Salesforce.
+- *Argus* — Argus Cyber Security (incumbent in adjacent infosec).
+- *Aegis* — Aegis Group is itself an insurer.
+- *Lineage* — Lineage Logistics, Lineage OS.
+
+Fallback if `themis.dev` / `themis.ai` are unobtainable: **Provene** (a provenance-rooted neologism with a clean trademark surface).
 
 ## What problem it solves
 
@@ -34,7 +52,7 @@ Themis closes the gap: routine AI work flows automatically, contract-affecting w
 
 ## First pilot target
 
-Sanlam Digisure — see [the pilot proposal](docs/stakeholders/10-sanlam-pilot-proposal.md) for scope, plan, exit criteria, and risk profile.
+An anchor regulated organisation (insurance / financial services, South Africa) — see [the anchor pilot proposal](docs/superpowers/specs/2026-05-22-themis-anchor-pilot-proposal.md) for scope, plan, exit criteria, and risk profile.
 
 ## Licence (planned)
 

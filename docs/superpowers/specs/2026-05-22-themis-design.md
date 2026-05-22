@@ -10,7 +10,7 @@
 
 ## TL;DR (one paragraph)
 
-Themis is a compliance gateway that records and governs every change AI coding tools make to your software. It captures who (which AI, which prompt, which human reviewer) changed what (which event contract, which service, which downstream consumer), proves it cryptographically (signed AI Bill of Materials per pull request, tamper-evident ledger), and stops changes that violate your policies before they merge. It plugs into your existing EventCatalog as ground truth for "what's safe to touch," and into your existing AI tools (Claude Code, Cursor, Copilot, VXD) without forcing a workflow change. The first pilot target is a Sanlam Digisure team; the design generalises to any regulated organisation adopting AI-assisted engineering.
+Themis is a compliance gateway that records and governs every change AI coding tools make to your software. It captures who (which AI, which prompt, which human reviewer) changed what (which event contract, which service, which downstream consumer), proves it cryptographically (signed AI Bill of Materials per pull request, tamper-evident ledger), and stops changes that violate your policies before they merge. It plugs into your existing EventCatalog as ground truth for "what's safe to touch," and into your existing AI tools (Claude Code, Cursor, Copilot, VXD) without forcing a workflow change. The first pilot target is an anchor regulated organisation; the design generalises to any regulated organisation adopting AI-assisted engineering.
 
 ---
 
@@ -32,9 +32,11 @@ Themis is a compliance gateway that records and governs every change AI coding t
 14. [Glossary](#14-glossary)
 15. [FAQ](#15-faq)
 16. [Appendix A — Architecture diagrams](#appendix-a)
-17. [Appendix B — Event taxonomy](#appendix-b)
-18. [Appendix C — Policy YAML examples](#appendix-c)
-19. [Companion documents](#companion-documents)
+16. [Recommendation — IP and open-source posture](#16-ip-posture)
+17. [Appendix A — Architecture diagrams](#appendix-a)
+18. [Appendix B — Event taxonomy](#appendix-b)
+19. [Appendix C — Policy YAML examples](#appendix-c)
+20. [Companion documents](#companion-documents)
 
 ---
 
@@ -103,7 +105,7 @@ The result: many regulated teams have *unofficial* policies of "don't use AI for
 - A consistent place to plug AI-specific scanners (secrets, slopsquatting, prompt-injection, PII heuristics) into the existing PR flow.
 - Deadman's-switch detection: if a developer or attacker removes the required CI check, Themis raises an alarm.
 - Cryptographic provenance for every AI-generated artefact — SBOM-style answers to "where did this code come from?" — using Sigstore (industry-standard, no key management for you).
-- A clear extension point to add organisation-specific scanners (Sanlam-internal rules, PCI/POPIA-specific PII patterns).
+- A clear extension point to add organisation-specific scanners (internal rules, PCI/POPIA-specific PII patterns).
 
 ---
 
@@ -145,7 +147,8 @@ The result: many regulated teams have *unofficial* policies of "don't use AI for
 4. **Append-only ledger.** Per-tenant `events.jsonl` + SQLite WAL projection. Merkle-chained for tamper-evidence.
 5. **Sigstore-style signing.** Cosign keyless attestation by default; local keypair fallback for air-gapped tenants.
 6. **Multi-tenant from day one.** Per-tenant filesystem isolation (`tenants/<id>/` paths) so cross-tenant leakage is physically prevented, not merely WHERE-clause-prevented.
-7. **Multiple surfaces, one core.** EventCatalog plugin, CLI, git/CI hook, web dashboard, REST API — all read from the same ledger; none can write outside the documented event taxonomy.
+7. **Multiple surfaces, one core.** EventCatalog plugin, CLI, git/CI hook, web dashboard, REST API, MCP server — all read from the same ledger; none can write outside the documented event taxonomy.
+8. **Agentic surfaces alongside a deterministic core.** AI agents are first-class consumers of Themis (via MCP server + advisory agents), but the trust-critical core — classifier, policy engine, BOM signing, ledger integrity — remains pure-function and deterministic. Same inputs always produce the same decision; the agentic layer can advise, draft, summarise, and investigate, but it never decides on its own. This is what lets Themis ship "AI-in-the-loop" without sacrificing the audit story.
 
 ### 5.2 Top-level diagram
 See [Appendix A](#appendix-a) for the full diagram. In words: AI tool sources fan in through adapters → ingest → classify → scan → policy → AI-BOM build → sign → ledger. Surfaces read from the ledger projection; they never write to it.
@@ -161,7 +164,7 @@ See [Appendix A](#appendix-a) for the full diagram. In words: AI tool sources fa
 ### 5.4 Hosting modes
 All produced from the same binary:
 - **Self-hosted single-tenant** — one org, one binary. Pilot mode.
-- **Self-hosted multi-tenant** — one binary, multiple tenant directories. For org groups (e.g. Sanlam Group with multiple regulated entities).
+- **Self-hosted multi-tenant** — one binary, multiple tenant directories. For org groups with multiple regulated entities.
 - **Managed SaaS (future)** — Themis-operated; same code, tenant dirs on managed storage.
 - **Air-gapped** — same binary, no outbound network. Local-key signing replaces Sigstore.
 
@@ -187,7 +190,9 @@ All produced from the same binary:
 | `surface/api` | REST + WebSocket. API-key auth at MVP; OIDC/SAML in v2. | OpenAPI spec emitted; versioned `/v1/`. |
 | `surface/web` | Embedded static SPA: tenant home, audit timeline, BOM viewer, policy editor, scan findings. | Air-gappable; single binary. |
 | `surface/githook` | Pre-receive / pre-push hook + GitHub Action wrapper. | Fails the build on policy denial. |
+| `surface/mcp` | MCP server exposing catalogue graph, impact classifier, policy outcomes, BOM history, ledger query as MCP tools. | **Agentic-first surface.** Lets Claude Code / Cursor / VXD query Themis pre-write ("would this PR be approved?") — shifts policy left into the prompt phase. All MCP tools read-only at MVP. |
 | `auth` | API keys + per-tenant role model: `dev`, `reviewer`, `compliance`, `admin`. | OIDC/SAML slot in at v2. |
+| `agent/advisor` | LLM-powered advisory agent: drafts human-readable review notes; summarises ledger queries; suggests policy refinements. | **Never on the trust-critical path.** Output is suggestion-only; the deterministic policy engine still issues the verdict. |
 | `runtime/secrets` | Pluggable secrets sources (env, file, AWS SM, Vault, Doppler). | Per tenant. |
 
 ### 6.2 Separate packages
@@ -343,18 +348,18 @@ Global gate: **≥95% overall coverage**, enforced in CI; per-package thresholds
 
 > **Timeline note.** Pilot weeks (below) run **after** MVP delivery (see §12.1). The MVP build (Themis Core single-tenant + EventCatalog plugin + four bundled scanners + four canonical adapters) takes ~6 weeks from project kickoff. The 90-day pilot (12 weeks below) starts at MVP+0. Pilot Phase 1 (weeks 1–2) can begin while the last two weeks of MVP are in flight (stakeholder identification + data-handling addendum + infra ticket can all be progressed in parallel) — Phase 2 deployment, however, requires the MVP binary to exist.
 
-### 11.1 First pilot — Sanlam Digisure
-**Why:** Themis's author works at Sanlam. Digisure already runs EventCatalog. The compliance + risk posture of Sanlam Group is conservative enough that any defensible AI-engineering tool is welcome. The catalogue has 3 domains (CapstonePAS, Collections, Trustflow), nested subdomains, services, and event schemas — enough surface to prove the classifier without overwhelming the pilot.
+### 11.1 First pilot — anchor regulated organisation
+**Why this organisation profile:** the author has direct access to a regulated SA insurance organisation that already runs EventCatalog at the business-unit level. Its compliance and risk posture is appropriately conservative about AI; its catalogue has multiple top-level domains with nested subdomains, services, and AsyncAPI-schema'd events — enough surface to prove the classifier without overwhelming the pilot. The pilot target's name is intentionally elided in this document; see [`2026-05-22-themis-anchor-pilot-proposal.md`](2026-05-22-themis-anchor-pilot-proposal.md) for the template proposal addressed to that organisation.
 
 ### 11.2 Pilot scope (90 days)
 **Week 1–2:** Stakeholder alignment.
-- Identify pilot team (one Digisure squad with active AI-tool usage).
-- Identify compliance sponsor (Sanlam Digisure compliance / risk lead).
+- Identify pilot team (one business-unit squad with active AI-tool usage).
+- Identify compliance sponsor (the anchor organisation's compliance / risk lead).
 - Identify engineering sponsor (squad tech lead).
 - Confirm catalogue access (read-only fork or pull from origin).
 - Sign internal data-handling addendum (hashed-prompts default, full text opt-out).
 
-**Week 3–6:** Themis MVP deployment (single-tenant, self-hosted in Sanlam infra).
+**Week 3–6:** Themis MVP deployment (single-tenant, self-hosted in the anchor organisation's infrastructure).
 - Pilot team's repo(s) wired to Themis (GitHub Action installed; pre-receive optional).
 - Catalogue ingestion live; policies drafted with compliance sponsor in YAML.
 - Mempalace per-tenant wing initialised; existing repo history mined to seed.
@@ -368,7 +373,7 @@ Global gate: **≥95% overall coverage**, enforced in CI; per-package thresholds
 **Week 11–12:** Evaluation + decision.
 - Metrics: % of AI PRs gated, false-positive rate, average decision latency, audit-packet generation time, deadman's-switch detections, override invocations.
 - Compliance sponsor produces a written assessment: is the artefact (audit packet + ledger) sufficient for the next external audit?
-- Joint decision: expand to second squad / second Sanlam entity, or iterate.
+- Joint decision: expand to second squad / second entity in the same group, or iterate.
 
 ### 11.3 Risks to the pilot
 - **Catalogue drift** — if the catalogue is itself out of date vs. reality, Themis classifies wrong. Mitigation: include "catalogue freshness" as a tenant-level metric.
@@ -381,12 +386,12 @@ Global gate: **≥95% overall coverage**, enforced in CI; per-package thresholds
 ## 12. Roadmap
 
 ### 12.1 MVP (weeks 1–6 from project kickoff)
-Catalyst (the "C now, A roadmap" decision): EventCatalog-native plugin + Themis Core single-tenant + VXD + Claude Code adapters + the four bundled scanners + REST API + CLI + web dashboard. SQLite ledger. Sigstore keyless signing. Goal: binary + plugin ready for Sanlam pilot deployment.
+Catalyst (the "C now, A roadmap" decision): EventCatalog-native plugin + Themis Core single-tenant + VXD + Claude Code adapters + the four bundled scanners + REST API + CLI + web dashboard + MCP server (read-only) + advisory agent (LLM-powered review notes). SQLite ledger. Sigstore keyless signing. Goal: binary + plugin ready for anchor-pilot deployment.
 
 > The MVP **build** (weeks 1–6 from kickoff) precedes the **pilot** (12 weeks; see §11). The pilot's Phase 1 (alignment) can run in parallel with weeks 5–6 of the MVP build to compress total elapsed time.
 
 ### 12.2 GA (months 3–6)
-Multi-tenant hardening. Cursor + Copilot adapters. OIDC/SAML SSO. Notification fan-out (Slack/Teams/email). Air-gapped mode validated with a second buyer. Hosted SaaS (managed) optional offering. AI-BOM schema v2 (incorporating pilot feedback).
+Multi-tenant hardening. Cursor + Copilot adapters. OIDC/SAML SSO. Notification fan-out (Slack/Teams/email). Air-gapped mode validated with a second buyer. Hosted SaaS (managed) optional offering. AI-BOM schema v2 (incorporating pilot feedback). **Agentic GA**: `agent/investigator` (synthesises forensic narratives across the ledger in response to audit queries) and `agent/policy_suggester` (mines PR history to propose new policy rules as read-only suggestions in YAML diff form).
 
 ### 12.3 AEGIS expansion (months 6–12)
 Generalise beyond EventCatalog. Generic dependency-graph ingest (Backstage, OpenAPI/Protobuf-only orgs, monorepo-without-catalogue). Custom scanner marketplace. Policy templates library (per-regulator: POPIA, PCI, HIPAA, SOC2, ISO 27001). Multi-buyer reference architectures.
@@ -402,12 +407,12 @@ Generalise beyond EventCatalog. Generic dependency-graph ingest (Backstage, Open
 
 These are flagged for stakeholder resolution before implementation begins.
 
-1. **Pilot team selection.** Which Sanlam Digisure squad? Need a sponsor name by week 1.
-2. **Hosting decision.** Self-hosted in Sanlam infra vs. Themis-managed VM in Sanlam tenancy. The former is more aligned with conservative compliance posture; the latter is faster to stand up.
+1. **Pilot team selection.** Which squad in the anchor organisation? Need a sponsor name by week 1.
+2. **Hosting decision.** Self-hosted in the anchor organisation's infrastructure vs. Themis-managed VM in the organisation's tenancy. The former is more aligned with conservative compliance posture; the latter is faster to stand up.
 3. **Policy ownership.** Who writes the first policy? (Proposed: compliance sponsor + tech lead, with Themis providing 3 starter templates.)
 4. **Catalogue write-back.** v1 is read-only. Should we plan v2 catalogue-update PRs explicitly into the roadmap, or wait for pilot feedback?
-5. **Sanlam IP / open-source split.** The EventCatalog plugin is intended Apache 2.0. The Themis Core can be open-core (community edition + paid features) or closed-source initially. Need exec view.
-6. **External anchoring default.** Per-tenant opt-in is the proposed default. Sanlam may want opt-out everywhere (no outbound calls); confirm.
+5. **IP / open-source split.** See §16 below for the author's recommendation (open core: Apache 2.0 for Core, Plugin, SDKs, BOM schema; commercial-proprietary for managed hosting, regulator-mapped policy packs, premium scanners, support SLA). Anchor-org confirmation required.
+6. **External anchoring default.** Per-tenant opt-in is the proposed default. The anchor organisation may want opt-out everywhere (no outbound calls); confirm.
 
 ---
 
@@ -418,11 +423,11 @@ These are flagged for stakeholder resolution before implementation begins.
 - **Classifier** — The pure function that takes an `AIChange` and `CatalogueGraph` and returns an `Impact` ("breaking change to NotificationDispatchedEventV2, owned by Team X, with 3 downstream consumers").
 - **Decision** — The policy engine's output: `ALLOW` / `REQUIRE_APPROVAL` (with required approvers) / `DENY`.
 - **Deadman's switch** — A heartbeat that detects the *absence* of an expected signal — used here to detect when a required CI enforcement has been silently removed.
-- **EventCatalog** — Open-source documentation tool for event-driven architectures (eventcatalog.dev). Sanlam Digisure runs an instance.
+- **EventCatalog** — Open-source documentation tool for event-driven architectures (eventcatalog.dev). The anchor pilot organisation runs an instance at the business-unit level.
 - **Hallucinated import / slopsquatting** — AI tools sometimes suggest package names that do not exist (hallucinated) or are typo-squats of real packages (slopsquatting), both of which are critical supply-chain risks.
 - **Hosting modes** — Single-tenant, multi-tenant, managed SaaS, air-gapped. All produced from the same binary.
 - **Ledger** — Themis's append-only `events.jsonl` plus a SQLite WAL projection for queries. Per tenant. Merkle-chained.
-- **Mempalace** — Local-first memory store used across Sanlam projects; Themis writes per-tenant drawers for cross-repo search of past AI decisions.
+- **Mempalace** — Local-first memory store used across the author's projects; Themis writes per-tenant drawers for cross-repo search of past AI decisions.
 - **Merkle chain** — Each event references the prior event's content hash, making silent edits detectable.
 - **Policy** — YAML rules expressed in the consuming repo's `themis.yaml`. Reviewed and versioned like code. Pure function input alongside `AIChange` and `Impact`.
 - **Sigstore (cosign)** — Keyless code-signing infrastructure (sigstore.dev) used to attest AI-BOMs without managing private keys.
@@ -470,6 +475,62 @@ A: Merkle chain + integrity-check command + optional external anchoring (per-ten
 
 **Q: Who maintains the policies as the catalogue evolves?**
 A: Policies live in git and are reviewed like code. We provide three starter templates (conservative / balanced / permissive). The compliance officer + tech lead co-own the policy file for their domain. Policy versions are themselves recorded in the ledger.
+
+---
+
+## 16. Recommendation — IP and open-source posture
+<a name="16-ip-posture"></a>
+
+This is one of the open questions in §13. Below is the author's recommendation with reasoning; final decision rests with the project owner / commercial stakeholders.
+
+### Recommendation: **open core**
+
+Apache 2.0 for everything in the trust-critical path and standard distribution surfaces; commercial-proprietary for managed hosting, regulator-specific compliance assets, premium integrations, and support SLA.
+
+**Apache 2.0 (open source from day 1):**
+- Themis Core engine — `ingest`, `classify`, `policy`, `scan`, `bom`, `sign`, `ledger`, `catalogue`, `tenant`, `auth` (API-key tier), all four bundled scanners
+- All surfaces — `surface/cli`, `surface/api`, `surface/web` (basic dashboard), `surface/githook`, `surface/mcp`
+- `@themis/eventcatalog-plugin` (already declared)
+- SDKs (`@themis/sdk-node`, `themis-sdk-go`)
+- AI-BOM JSON Schema (`themis-bom-schema`)
+- Reference policies (the three starter templates)
+- `agent/advisor` (basic advisory agent; uses caller's own LLM provider)
+
+**Commercial-proprietary (paid):**
+- Managed SaaS hosting (Themis-operated infrastructure, SLA-backed)
+- SSO / OIDC / SAML providers beyond the basic API-key auth tier
+- Regulator-mapped policy packs (POPIA Pack, PCI-DSS Pack, HIPAA Pack, ISO 27001 Pack, EU AI Act Pack)
+- Premium scanners (org-specific patterns, ML-trained detectors, supply-chain reputation feeds)
+- Premium integrations (ServiceNow GRC, Drata, Vanta, Workiva)
+- `agent/investigator` and `agent/policy_suggester` (premium tier of agentic features)
+- Support SLA + production-grade incident response
+- Air-gapped enterprise distribution (signed installer, SBOM bundle, customer-specific scanners)
+
+### Why open core is the right answer for Themis
+
+1. **Compliance buyers need to read the code.** This is the single strongest argument. Banks, insurers, and regulated public-sector buyers will not approve a closed-source product that makes go/no-go decisions on their PRs. They need to satisfy themselves (and often a third-party security auditor) that the policy engine is what it claims to be. Closed source kills the deal before procurement ever sees it.
+2. **Open source is distribution.** The EventCatalog community (3k+ GitHub stars, used by Vodafone, Capital One, Northwestern Mutual) installs the plugin once and learns Themis exists. Closed core would mean every customer is a cold outbound — multiplier zero.
+3. **The moat isn't the code; it's the curated policy packs, managed operations, and integrations.** Mapping a regulator's exact language to Themis policy YAML (POPIA → policy.yaml; PCI-DSS § 6.4 → policy.yaml) is months of specialist work that customers value highly but cannot easily replicate. That's where the commercial value concentrates.
+4. **Solo-developer reality.** Adapter coverage, scanner depth, locale-specific scanners — the long tail of value-additive work — only happens at scale through community contributions. The OSS license is the gating factor for that to happen.
+5. **Adjacent precedent.** Sigstore (open), Mempalace (open-ish), EventCatalog (Apache 2.0), VXD (open), GitLab, HashiCorp pre-IBM, Mattermost, Grafana — all open-core models in adjacent spaces, all with sustainable commercial businesses.
+6. **Trust signalling for audits.** Open-source code that has been independently security-audited (which Themis should be, before GA) makes "tampering risk" a much easier conversation with prospective customers. "You can read it" + "an external firm did read it" + "the build artefacts are reproducible" beats "trust us."
+
+### Why *not* fully open / fully closed
+
+- **Fully open (everything Apache 2.0 forever)** sacrifices the only natural monetisation lever (managed hosting + curated commercial assets). Fine for a hobby project; not aligned with the user's stated goal of monetisation.
+- **Fully closed** sacrifices the credibility, distribution, and community-contribution upside. It's also unlikely to win a regulated buyer who insists on code review.
+- **Source-available (BSL / SSPL / Elastic License)** — possible, but adds market confusion ("is it open source? sort of?"), tends to drag down community contribution, and most regulated buyers don't distinguish it meaningfully from closed source for their procurement purposes. Not recommended.
+
+### Licence decisions to take *before* code is published
+
+1. Confirm Apache 2.0 for the scope above (or alternative permissive licence — MIT is fine; copyleft like AGPL would change the community calculus significantly).
+2. Decide a Contributor Licence Agreement (CLA) or Developer Certificate of Origin (DCO) policy.
+3. Set up the commercial / OSS split as a monorepo with clearly labelled directories, or as separate repos. Recommendation: monorepo with `/oss/` and `/commercial/` top-level dirs; build tags / build configurations control what is included in each binary distribution.
+4. Decide trademark posture for "Themis" — should be filed if commercial intent is firm.
+
+### Risk: license incompatibility with future commercial features
+
+The most common open-core trap is shipping commercial features that have to *call into* OSS code in ways that the OSS licence then governs (especially under copyleft). Apache 2.0 is permissive enough that this is not a problem; we can safely link commercial-proprietary code against the Apache 2.0 core. **Recommended licence is therefore Apache 2.0 (not GPL/AGPL).**
 
 ---
 
@@ -536,7 +597,7 @@ On any failure: corresponding `*_FAILED` / `*_STALE` / `*_PARTIAL` event is emit
 /var/lib/themis/                          (or ~/.themis/ for self-hosted dev)
 ├── config.yaml                            (binary-level config)
 └── tenants/
-    ├── sanlam-digisure/                  (one directory per tenant)
+    ├── anchor-pilot-org/                  (one directory per tenant)
     │   ├── tenant.yaml                   (catalogue source, policies path, secrets refs)
     │   ├── events.jsonl                  (append-only ledger)
     │   ├── projection.sqlite             (WAL-mode projection)
@@ -668,13 +729,13 @@ rules:
 
 ## Companion documents
 
-Audience-specific one-pagers and the Sanlam pilot proposal live alongside this spec:
+Audience-specific one-pagers and the anchor pilot proposal live alongside this spec:
 
 - [Executive summary](2026-05-22-themis-exec-summary.md) — one page, exec-sponsor framing.
 - [Compliance brief](2026-05-22-themis-compliance-brief.md) — for compliance, risk, audit.
 - [Engineering brief](2026-05-22-themis-engineering-brief.md) — for tech leads.
 - [Security brief](2026-05-22-themis-security-brief.md) — for AppSec / security engineering.
-- [Sanlam pilot proposal](2026-05-22-themis-sanlam-pilot-proposal.md) — the formal pilot ask.
+- [Anchor pilot proposal](2026-05-22-themis-anchor-pilot-proposal.md) — the formal pilot-ask template.
 
 ---
 
