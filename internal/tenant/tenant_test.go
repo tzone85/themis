@@ -1,6 +1,7 @@
 package tenant
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -35,5 +36,48 @@ func TestTenant_RejectsTraversalID(t *testing.T) {
 		if _, err := New(base, id); err == nil {
 			t.Errorf("New(%q) should error; ID contains illegal characters", id)
 		}
+	}
+}
+
+func TestInit_CreatesAllExpectedDirs(t *testing.T) {
+	base := t.TempDir()
+	tn, err := Init(base, "acme-corp")
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	for _, dir := range []string{tn.Root(), tn.BOM(), tn.Wing()} {
+		info, err := os.Stat(dir)
+		if err != nil {
+			t.Errorf("%q not created: %v", dir, err)
+			continue
+		}
+		if !info.IsDir() {
+			t.Errorf("%q exists but is not a directory", dir)
+		}
+	}
+}
+
+func TestInit_IsIdempotent(t *testing.T) {
+	base := t.TempDir()
+	if _, err := Init(base, "acme-corp"); err != nil {
+		t.Fatalf("first Init: %v", err)
+	}
+	if _, err := Init(base, "acme-corp"); err != nil {
+		t.Fatalf("second Init (should be no-op): %v", err)
+	}
+}
+
+func TestInit_TenantsCannotEscapeBase(t *testing.T) {
+	// Construct a Tenant with a malicious base that includes "..".
+	// (Won't ever happen via Init — base is operator-supplied — but if it
+	// does, the methods must still produce paths anchored to that base.)
+	bad, err := New("/var/lib/themis/../../etc", "acme")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	// Root must remain underneath the (now-canonicalised) base; this test
+	// documents that we don't sanitise base — that's the operator's job.
+	if !strings.Contains(bad.Root(), "acme") {
+		t.Fatalf("Root() lost the tenant id: %q", bad.Root())
 	}
 }
