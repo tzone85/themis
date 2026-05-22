@@ -1,4 +1,4 @@
-.PHONY: build test cover lint vet ci clean
+.PHONY: build test cover cover-html lint vet vulncheck ci clean
 
 BIN := ~/.local/bin/themis
 PKGS := ./...
@@ -22,7 +22,11 @@ lint:
 vet:
 	go vet $(PKGS)
 
-ci: vet lint test cover
+vulncheck:
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	govulncheck $(PKGS)
+
+ci: vet lint test cover vulncheck
 	bash scripts/cover_check.sh
 
 clean:
