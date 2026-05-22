@@ -50,3 +50,24 @@ func TestEvent_HashChangesWithAnyField(t *testing.T) {
         }
     }
 }
+
+func TestChain_LinksConsecutiveEvents(t *testing.T) {
+    a := Event{Kind: "A", Tenant: "x", Timestamp: time.Unix(1, 0).UTC(), Payload: json.RawMessage(`{}`), PrevHash: ZeroHash}
+    aHash, _ := a.ContentHash()
+
+    b := Event{Kind: "B", Tenant: "x", Timestamp: time.Unix(2, 0).UTC(), Payload: json.RawMessage(`{}`)}
+    b = Chain(b, aHash)
+
+    if b.PrevHash != aHash {
+        t.Fatalf("Chain did not set PrevHash; got %q want %q", b.PrevHash, aHash)
+    }
+}
+
+func TestChain_DifferentPriorsProduceDifferentChildHashes(t *testing.T) {
+    base := Event{Kind: "X", Tenant: "t", Timestamp: time.Unix(10, 0).UTC(), Payload: json.RawMessage(`{}`)}
+    h1, _ := Chain(base, "AAAA").ContentHash()
+    h2, _ := Chain(base, "BBBB").ContentHash()
+    if h1 == h2 {
+        t.Fatal("child events with different priors should hash differently")
+    }
+}

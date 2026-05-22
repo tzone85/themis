@@ -63,3 +63,9 @@ func (e Event) ContentHash() (string, error) {
     sum := sha256.Sum256(raw)
     return hex.EncodeToString(sum[:]), nil
 }
+
+// Chain returns a copy of e with PrevHash set to prior. Used when appending.
+func Chain(e Event, prior string) Event {
+    e.PrevHash = prior
+    return e
+}
