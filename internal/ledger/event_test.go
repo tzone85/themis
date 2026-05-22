@@ -71,3 +71,16 @@ func TestChain_DifferentPriorsProduceDifferentChildHashes(t *testing.T) {
         t.Fatal("child events with different priors should hash differently")
     }
 }
+
+func TestEvent_ContentHashErrorsOnInvalidPayload(t *testing.T) {
+    e := Event{
+        Kind:      "X",
+        Tenant:    "y",
+        Timestamp: time.Unix(1, 0).UTC(),
+        Payload:   json.RawMessage(`{bad json`),
+        PrevHash:  ZeroHash,
+    }
+    if _, err := e.ContentHash(); err == nil {
+        t.Fatal("ContentHash should error on invalid JSON payload")
+    }
+}

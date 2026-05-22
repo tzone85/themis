@@ -1,0 +1,24 @@
+# 2026/05/23 00:37:52.781865 [TestPropContentHash_DependsOnAllFields] [rapid] draw kind: "A"
+# 2026/05/23 00:37:52.781869 [TestPropContentHash_DependsOnAllFields] [rapid] draw tenant: "a"
+# 2026/05/23 00:37:52.781870 [TestPropContentHash_DependsOnAllFields] [rapid] draw ts: 0
+# 2026/05/23 00:37:52.781872 [TestPropContentHash_DependsOnAllFields] [rapid] draw prev: "GENESIS"
+# 2026/05/23 00:37:52.781873 [TestPropContentHash_DependsOnAllFields] [rapid] draw field: "Payload"
+# 2026/05/23 00:37:52.781877 [TestPropContentHash_DependsOnAllFields] marshal event for hashing: json: error calling MarshalJSON for type json.RawMessage: invalid character '|' after object key:value pair
+# 
+v0.4.8#11934988490391615154
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x38e38e38e38e4
+0x3
