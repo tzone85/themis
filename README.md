@@ -6,7 +6,42 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Pre-implementation.** This repository currently contains the design specification and stakeholder briefs. Implementation begins after stakeholder review and pilot approval.
+> **Plan 1 (Foundation) implemented.** Project skeleton, tenant model, append-only Merkle ledger, SQLite WAL projection, replay/verify/doctor, and the `themis` CLI are all in. See the Changelog below for details. Plan 2 (catalogue + classifier) is next.
+
+## Changelog
+
+### Unreleased — Plan 1 (Foundation)
+
+**Added**
+
+- Go module scaffold + Makefile + golangci-lint config + GitHub Actions CI workflow + coverage gate.
+- `internal/tenant` package — `Tenant` value type, validated IDs (DNS-label-safe), per-tenant filesystem paths, cross-tenant isolation property test.
+- `internal/ledger` package:
+  - `Event` struct with deterministic SHA-256 content hash + Merkle-style hash chain.
+  - Append-only JSONL `Store` with fsync durability and chain-check on every append.
+  - SQLite WAL `Projection` with kind-checked, idempotent `Project()`.
+  - Event-kind `Registry` + `DefaultRegistry` + wiring test ensuring every used kind is registered before it can be projected.
+  - `Replay`, `Verify`, and `Doctor` for ledger reconstruction and integrity checks.
+  - Property tests covering hash determinism, hash sensitivity to every field, and `Replay ≡ live Project`.
+- `themis` CLI (`cmd/themis`):
+  - `themis tenant init` — initialise a tenant directory tree + emit `TENANT_INITIALISED`.
+  - `themis ledger doctor / verify / replay` — health (JSON), integrity check, projection rebuild.
+- `make vulncheck` target running `govulncheck` against the module.
+
+**Fixed**
+
+- `scripts/cover_check.sh`: `grep -v 'total:' || true | awk …` was binding `||` to the whole pipeline, so the per-package awk reducer never ran and per-package thresholds silently never enforced. Now grouped with braces.
+- `scripts/cover_check.sh`: forced `LC_ALL=C` so awk emits `.` (not `,`) as decimal separator on locales where `bc -l` would otherwise fail to parse the per-pkg pct.
+
+**Notes**
+
+- Multi-tenant filesystem isolation enforced at the storage layer (`tenants/<id>/`).
+- Pure-Go SQLite driver (`modernc.org/sqlite`) — no CGO, cross-compile friendly, air-gapped-friendly.
+- Apache 2.0 licence (per design spec §16).
+- Tests use `pgregory.net/rapid` for property testing.
+- Coverage gate thresholds calibrated to the highest level achievable without dependency-injected I/O mocks: global 90 %, `internal/tenant` 95 %, `internal/ledger` 90 %, `internal/cli` 90 %, `cmd/themis` exempt (covered indirectly via integration smoke). Wrapped-error branches in `store.go` / `projection.go` for post-marshal `ContentHash`, `bw.Flush` and `fsync` failures after successful writes are structurally unreachable in production paths.
+
+
 
 ## Documentation
 
