@@ -62,3 +62,37 @@ func Verify(storePath string) error {
 	}
 	return nil
 }
+
+// Report is the structured output of Doctor.
+type Report struct {
+	EventCount  int
+	ChainIntact bool
+	ChainError  string
+	LastHash    string
+}
+
+// Doctor inspects the ledger and produces a Report. Unlike Verify, Doctor
+// never returns a non-nil error for ledger-content issues; it captures
+// such conditions inside the Report. (Errors only on I/O failures.)
+func Doctor(storePath string) (Report, error) {
+	events, err := ReadAll(storePath)
+	if err != nil {
+		return Report{}, err
+	}
+	rep := Report{EventCount: len(events), LastHash: ZeroHash, ChainIntact: true}
+	prev := ZeroHash
+	for i, e := range events {
+		if e.PrevHash != prev {
+			rep.ChainIntact = false
+			rep.ChainError = fmt.Sprintf("chain break at event %d (%s): prev=%q want %q", i, e.Kind, e.PrevHash, prev)
+			return rep, nil
+		}
+		h, err := e.ContentHash()
+		if err != nil {
+			return Report{}, err
+		}
+		prev = h
+	}
+	rep.LastHash = prev
+	return rep, nil
+}

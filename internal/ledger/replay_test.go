@@ -107,3 +107,68 @@ func TestVerify_DetectsByteFlip(t *testing.T) {
 		t.Fatalf("Verify error should mention chain or decode: %v", err)
 	}
 }
+
+func TestDoctor_ReportsCountsAndChainState(t *testing.T) {
+	dir := t.TempDir()
+	storePath := filepath.Join(dir, "events.jsonl")
+	s, err := OpenStore(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"TENANT_INITIALISED", "LEDGER_REPLAYED", "LEDGER_VERIFIED"} {
+		if _, err := s.Append(newTestEvent(kind, s.LastHash())); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Close()
+
+	rep, err := Doctor(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.EventCount != 3 {
+		t.Errorf("EventCount = %d, want 3", rep.EventCount)
+	}
+	if !rep.ChainIntact {
+		t.Error("ChainIntact = false on a clean ledger")
+	}
+	if rep.LastHash == "" || rep.LastHash == ZeroHash {
+		t.Errorf("LastHash should be a real hash, got %q", rep.LastHash)
+	}
+}
+
+func TestDoctor_DetectsChainBreak(t *testing.T) {
+	dir := t.TempDir()
+	storePath := filepath.Join(dir, "events.jsonl")
+	s, err := OpenStore(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Append(newTestEvent("TENANT_INITIALISED", s.LastHash())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Append(newTestEvent("LEDGER_REPLAYED", s.LastHash())); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	raw, err := os.ReadFile(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw[10] ^= 0x01
+	if err := os.WriteFile(storePath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	rep, err := Doctor(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.ChainIntact {
+		t.Fatal("Doctor reported ChainIntact=true on tampered ledger")
+	}
+	if rep.ChainError == "" {
+		t.Fatal("Doctor reported empty ChainError on tampered ledger")
+	}
+}
