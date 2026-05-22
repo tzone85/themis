@@ -1,0 +1,30 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+      - name: exported
+      - name: package-comments
+  gosec:
+    excludes:
+      - G104  # errcheck handles this; gosec double-reports
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec  # tests use t.TempDir() and similar; gosec false-positives.
