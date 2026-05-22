@@ -103,3 +103,29 @@ func TestTenant_DistinctIDsAlwaysGetDistinctRoots(t *testing.T) {
 		t.Fatal("tenant b's root is nested under tenant a's root")
 	}
 }
+
+func TestTenant_RejectsEmptyBase(t *testing.T) {
+	if _, err := New("", "acme"); err == nil {
+		t.Fatal("New with empty base should error")
+	}
+}
+
+func TestInit_ReturnsErrorWhenBaseIsAFile(t *testing.T) {
+	// Create a regular file at the path we will pass as `base`.
+	// MkdirAll under it must fail because a file blocks the directory tree.
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "blocker")
+	if err := os.WriteFile(filePath, []byte("blocker"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Init(filePath, "acme"); err == nil {
+		t.Fatal("Init under a non-directory base should error")
+	}
+}
+
+func TestInit_PropagatesNewError(t *testing.T) {
+	// Init should propagate errors from New (e.g., empty ID).
+	if _, err := Init(t.TempDir(), ""); err == nil {
+		t.Fatal("Init with empty ID should error")
+	}
+}
