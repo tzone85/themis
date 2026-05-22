@@ -61,3 +61,20 @@ func bytesLines(b []byte) int {
     }
     return n
 }
+
+func TestStore_RejectsAppendWithStaleChain(t *testing.T) {
+    dir := t.TempDir()
+    path := filepath.Join(dir, "events.jsonl")
+    s, err := OpenStore(path)
+    if err != nil { t.Fatal(err) }
+    defer s.Close()
+
+    e1 := newTestEvent("A", s.LastHash())
+    if _, err := s.Append(e1); err != nil { t.Fatal(err) }
+
+    // Now try to append an event whose PrevHash is wrong.
+    bad := newTestEvent("B", "WRONG_PREVIOUS_HASH")
+    if _, err := s.Append(bad); err == nil {
+        t.Fatal("Append accepted stale-chain event; should have rejected")
+    }
+}
