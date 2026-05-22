@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Force C locale so awk printf emits "." (not ",") as decimal separator —
+# otherwise `bc -l` fails to parse the resulting "100,0" on locales that
+# use comma decimals.
+export LC_ALL=C
+
 # Reads coverage.out (go cover profile) and coverage.thresholds.yaml.
 # Fails if global coverage or any per-package coverage is below threshold.
 
@@ -16,8 +21,12 @@ fi
 GLOBAL_PCT=$(go tool cover -func="$COVERAGE_FILE" | awk '/^total:/ {gsub("%",""); print $3}')
 
 # Per-package coverage from `go tool cover -func`.
+#
+# NOTE: `grep -v ... || true` must be grouped so the `|| true` only swallows
+# grep's exit, not the whole pipeline — otherwise the awk reducer never runs
+# and per-package thresholds silently never enforce.
 PER_PKG=$(go tool cover -func="$COVERAGE_FILE" \
-  | grep -v '^total:' || true \
+  | { grep -v '^total:' || true; } \
   | awk '{gsub("%","",$3); pkg=$1; sub(/\/[^\/]+$/, "", pkg); cov[pkg]+=$3; cnt[pkg]++} END {for (k in cov) printf "%s %.1f\n", k, cov[k]/cnt[k]}')
 
 # Global gate.
