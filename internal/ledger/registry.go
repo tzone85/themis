@@ -58,3 +58,23 @@ func (r *Registry) Kinds() []string {
 	sort.Strings(out)
 	return out
 }
+
+// DefaultRegistry returns the registry pre-populated with all event kinds
+// the Themis core ledger uses.
+//
+// IMPORTANT: when adding a new event kind anywhere in the codebase, add
+// its projector here AND extend internal/ledger/wiring_test.go to assert
+// the kind is registered. Wiring tests prevent the default-case-eats-events
+// bug class observed in adjacent systems (see VXD shared-learnings).
+func DefaultRegistry() *Registry {
+	r := NewRegistry()
+	r.Register("TENANT_INITIALISED", noopProject)
+	r.Register("LEDGER_REPLAYED", noopProject)
+	r.Register("LEDGER_VERIFIED", noopProject)
+	return r
+}
+
+// noopProject is a placeholder projector used for kinds whose projection
+// is "just record the event" — the row already lands in events table via
+// the generic projector path; no kind-specific work is needed.
+func noopProject(_ []byte) error { return nil }
