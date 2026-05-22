@@ -1,0 +1,7 @@
+# Per-package coverage targets. Global target is 95% (enforced in scripts/cover_check.sh).
+# A package may set a higher target; the gate enforces the higher of (global, per-package).
+global: 95.0
+packages:
+  github.com/tzone85/themis/internal/ledger: 95.0
+  github.com/tzone85/themis/internal/tenant: 95.0
+  github.com/tzone85/themis/internal/cli: 90.0  # CLI glue gets a lower bar; logic must be in pure packages.
