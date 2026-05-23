@@ -6,9 +6,44 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 2 (Catalogue + Classifier) implemented.** Plans 1 and 2 are in: project skeleton, tenant model, append-only Merkle ledger, SQLite WAL projection, replay/verify/doctor, EventCatalog parser, pure `Classify(AIChange, CatalogueGraph) → Impact` with property tests, and the `themis catalogue sync` + `themis classify` CLI commands. See the Changelog below. Plan 3 (scanners + policy engine) is next.
+> **Plan 3 (Scanners + Policy Engine) implemented.** Plans 1, 2, and 3 are in: foundations, catalogue + classifier, and now the pluggable scanner framework (secrets, PII) plus the YAML-driven policy engine producing `ALLOW`/`REQUIRE_APPROVAL`/`DENY` decisions. New CLI: `themis policy lint`, `themis decide`. See the Changelog below. Plan 4 (BOM + signing + supply-chain scanners) is next.
 
 ## Changelog
+
+### Unreleased — Plan 3 (Scanners + Policy Engine)
+
+**Added**
+
+- `internal/scan`:
+  - `Scanner` interface, `Finding` value type, `Severity` enum (info < low < med < high < critical) with rank ordering.
+  - Secrets scanner — AWS access keys, PEM private-key blocks, secret-flavoured key=value pairs (≥ 16 char values).
+  - PII scanner — Luhn-validated credit-card-shaped digit runs, SA ID-shaped 13-digit runs (with YYMMDD validity check), email addresses.
+  - Both scanners emit redacted descriptions only — raw secret/PII material never leaves the scanner.
+  - Property tests: secrets scanner has zero false positives on low-entropy ASCII prose; always fires on AWS prefix + 16 upper-alphanumerics.
+  - `RunAll` orchestrator: runs all scanners, captures scanner crashes as `scan_failure` findings, sorts output for deterministic ledger projection.
+- `internal/policy`:
+  - YAML schema: `Policy { version, default, required_approvers_for_default, rules: [{name, when, then}] }`.
+  - `Parse` rejects: missing version, unknown version, missing/invalid default verdict, nameless rules, invalid verdicts in rules, malformed severity clauses. Every parse failure wraps `ErrPolicyInvalid` so the CLI can route to a `POLICY_INVALID` ledger event.
+  - Pure `Decide(AIChange, Impact, []Finding, Policy) Decision` — first-rule-wins, fail-closed on missing default.
+  - Match clauses: `impact.kind` (list), `impact.domain` (string), `findings.kind` (string), `findings.severity` (`>=info|low|med|high|critical`).
+  - Property tests: determinism (same inputs → identical Decision bytes), no-default-always-denies, secret-rule-always-denies on non-DOC_ONLY input.
+- `internal/ledger` — three new registered kinds: `SCAN_FINDING`, `DECISION_ISSUED`, `POLICY_INVALID`. Wiring test extended.
+- `themis policy lint --file <path>` — parses and validates a policy YAML; non-zero exit on failure.
+- `themis decide --id <t> --base <state> --aichange <file> --policy <yaml> [--workdir <dir>] [--catalogue <json>]` — orchestrates classify → scan → policy → ledger:
+  1. loads catalogue snapshot,
+  2. loads + validates AIChange,
+  3. parses policy (emits `POLICY_INVALID` on failure),
+  4. classifies into an Impact,
+  5. reads workdir file bodies + runs every default scanner,
+  6. emits one `SCAN_FINDING` per finding,
+  7. runs the policy engine,
+  8. emits `DECISION_ISSUED`,
+  9. prints the Decision JSON.
+
+**Notes**
+
+- Scanner crashes never abort the decide pipeline — they become `scan_failure`-kind findings at `high` severity so policy can decide whether to require approval (design spec §8.1).
+- Findings are stored individually (one ledger event per finding), so adding or removing a scanner does not invalidate historical decisions.
 
 ### Unreleased — Plan 2 (Catalogue + Classifier)
 
