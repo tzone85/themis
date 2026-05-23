@@ -6,9 +6,32 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 1 (Foundation) implemented.** Project skeleton, tenant model, append-only Merkle ledger, SQLite WAL projection, replay/verify/doctor, and the `themis` CLI are all in. See the Changelog below for details. Plan 2 (catalogue + classifier) is next.
+> **Plan 2 (Catalogue + Classifier) implemented.** Plans 1 and 2 are in: project skeleton, tenant model, append-only Merkle ledger, SQLite WAL projection, replay/verify/doctor, EventCatalog parser, pure `Classify(AIChange, CatalogueGraph) → Impact` with property tests, and the `themis catalogue sync` + `themis classify` CLI commands. See the Changelog below. Plan 3 (scanners + policy engine) is next.
 
 ## Changelog
+
+### Unreleased — Plan 2 (Catalogue + Classifier)
+
+**Added**
+
+- `internal/aichange` — `AIChange` value type (the normalised "what this PR did" record), `FileTouch` with `ADDED|MODIFIED|DELETED`, JSON round-trip + `Validate()`.
+- `internal/catalogue`:
+  - `CatalogueGraph` value type with `Domain`, `Service`, `EventDef` plus `ConsumersOf` / `ProducerOf` / `DomainOfService` lookups.
+  - `Parse(root) (CatalogueGraph, error)` — reads EventCatalog v2 markdown front-matter under `domains/*/index.md`, `services/*/index.md`, `events/*/index.md`.
+  - `ContentHash` is deterministic over the graph's semantic content (proven by property test — invariant to filesystem ordering, sensitive to field edits).
+  - Mini EventCatalog fixture: 2 domains, 4 services, 6 events.
+- `internal/classify`:
+  - `Impact` + `Kind` with seven classifications: `SCHEMA_BREAKING`, `NEW_EVENT`, `PRODUCER_TOUCH`, `CONSUMER_TOUCH`, `NON_CONTRACT`, `OFF_CATALOGUE`, `DOC_ONLY`.
+  - Pure `Classify(AIChange, CatalogueGraph) → Impact`.
+  - Property tests: determinism (same inputs → same Impact bytes) and monotonicity-in-evidence (appending touched files never downgrades severity).
+- `internal/ledger` — registered two new event kinds in `DefaultRegistry`: `CATALOGUE_SYNCED`, `IMPACT_CLASSIFIED`. Wiring test extended.
+- `themis catalogue sync --id <t> --base <state> --source <path>` — parses the catalogue tree, writes a per-tenant `catalogue.json` snapshot, emits `CATALOGUE_SYNCED`.
+- `themis classify --id <t> --base <state> --aichange <file>` — classifies an AIChange JSON against the cached catalogue snapshot, emits `IMPACT_CLASSIFIED`, prints the Impact JSON.
+- Wiring-guard test: `themis classify` refuses to emit if `IMPACT_CLASSIFIED` is not in the registry (runtime complement to the static wiring test).
+
+**Notes**
+
+- Severity ordering (lowest → highest): `DOC_ONLY` < `OFF_CATALOGUE` < `NON_CONTRACT` < `CONSUMER_TOUCH` < `PRODUCER_TOUCH` < `NEW_EVENT` < `SCHEMA_BREAKING`. `OFF_CATALOGUE` ranks below `NON_CONTRACT` so that adding catalogue-adjacent files never downgrades severity (proven by the monotonicity property test). Out-of-tree changes get bespoke handling via policy YAML, not via inflated severity.
 
 ### Unreleased — Plan 1 (Foundation)
 
