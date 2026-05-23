@@ -60,9 +60,15 @@ func Classify(c aichange.AIChange, g catalogue.CatalogueGraph) Impact {
 		return imp
 	}
 
-	// Pass 3: doc-only.
-	if allDocs(c.TouchedFiles) && len(c.TouchedFiles) > 0 {
-		return Impact{Kind: KindDocOnly, Reason: "every touched file is documentation"}
+	// Pass 3: doc-only (also catches the "no files at all" base case so the
+	// classification floor sits at the lowest severity — this is what makes
+	// the monotonicity property hold when an empty AIChange grows new touches).
+	if allDocs(c.TouchedFiles) {
+		reason := "every touched file is documentation"
+		if len(c.TouchedFiles) == 0 {
+			reason = "no files touched"
+		}
+		return Impact{Kind: KindDocOnly, Reason: reason}
 	}
 
 	// Pass 4: off-catalogue (no touched path falls under domains/services/events/).

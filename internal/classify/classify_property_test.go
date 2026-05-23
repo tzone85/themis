@@ -71,6 +71,41 @@ func TestPropClassify_Deterministic(t *testing.T) {
 	})
 }
 
+// TestPropClassify_MonotonicInEvidence asserts that appending a touched file
+// to an AIChange never *decreases* the severity of its Impact. Auditing is
+// the worst-case discipline: more evidence may upgrade severity but must not
+// downgrade it (otherwise an attacker could hide a breaking change by
+// padding the PR with doc-only touches).
+func TestPropClassify_MonotonicInEvidence(t *testing.T) {
+	g := loadPropertyGraph(t)
+	rapid.Check(t, func(rt *rapid.T) {
+		base := drawAIChange(rt, g)
+		extra := drawAIChange(rt, g)
+		if len(extra.TouchedFiles) == 0 {
+			return
+		}
+		appended := base
+		appended.TouchedFiles = append(append([]aichange.FileTouch{}, base.TouchedFiles...), extra.TouchedFiles...)
+
+		impBase := Classify(base, g)
+		impAppended := Classify(appended, g)
+
+		if impAppended.Kind.Severity() < impBase.Kind.Severity() {
+			rt.Fatalf("appending evidence downgraded severity: base=%q (%d) → appended=%q (%d)\n  base files=%v\n  extra files=%v",
+				impBase.Kind, impBase.Kind.Severity(), impAppended.Kind, impAppended.Kind.Severity(),
+				pathSummary(base.TouchedFiles), pathSummary(extra.TouchedFiles))
+		}
+	})
+}
+
+func pathSummary(files []aichange.FileTouch) []string {
+	out := make([]string, len(files))
+	for i, f := range files {
+		out[i] = string(f.ChangeKind) + " " + f.Path
+	}
+	return out
+}
+
 // pick draws an element from a non-empty slice via rapid's SampledFrom.
 // Returns "" for empty slices so the generated path becomes nonsense — which
 // is exactly what we want for negative-path coverage.

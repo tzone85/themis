@@ -148,11 +148,11 @@ func TestClassify_NonContract_OnCatalogueAdjacentNonService(t *testing.T) {
 	}
 }
 
-func TestClassify_EmptyAIChange_OffCatalogue(t *testing.T) {
+func TestClassify_EmptyAIChange_DocOnly(t *testing.T) {
 	g := loadGraph(t)
 	imp := Classify(aichange.AIChange{}, g)
-	if imp.Kind != KindOffCatalogue {
-		t.Fatalf("Kind = %q, want OFF_CATALOGUE", imp.Kind)
+	if imp.Kind != KindDocOnly {
+		t.Fatalf("Kind = %q, want DOC_ONLY (no-files base case sits at severity floor)", imp.Kind)
 	}
 }
 

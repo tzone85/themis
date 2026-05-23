@@ -41,10 +41,18 @@ const (
 // severityRank orders Kinds by audit-severity, lowest (DOC_ONLY) to highest
 // (SCHEMA_BREAKING). The monotonicity property test relies on this ordering:
 // adding evidence to an AIChange may only push the Kind *up* this scale.
+//
+// OFF_CATALOGUE ranks BELOW NON_CONTRACT for a subtle reason: appending a
+// catalogue-adjacent file to an off-catalogue base must not *downgrade* the
+// classification. The semantic intuition ("OFF_CAT is more mysterious so
+// more severe") is wrong for monotonicity: severity is the floor a policy
+// rule may rely on, not a free-form risk score. Out-of-tree changes get
+// their bespoke handling via the OFF_CATALOGUE rule in policy YAML rather
+// than via severity inflation.
 var severityRank = map[Kind]int{
 	KindDocOnly:        0,
-	KindNonContract:    1,
-	KindOffCatalogue:   2,
+	KindOffCatalogue:   1,
+	KindNonContract:    2,
 	KindConsumerTouch:  3,
 	KindProducerTouch:  4,
 	KindNewEvent:       5,

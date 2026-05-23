@@ -9,9 +9,9 @@ func TestKind_SeverityOrdering(t *testing.T) {
 	cases := []struct {
 		lower, higher Kind
 	}{
-		{KindDocOnly, KindNonContract},
-		{KindNonContract, KindOffCatalogue},
-		{KindOffCatalogue, KindConsumerTouch},
+		{KindDocOnly, KindOffCatalogue},
+		{KindOffCatalogue, KindNonContract},
+		{KindNonContract, KindConsumerTouch},
 		{KindConsumerTouch, KindProducerTouch},
 		{KindProducerTouch, KindNewEvent},
 		{KindNewEvent, KindSchemaBreaking},

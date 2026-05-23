@@ -1,0 +1,81 @@
+# 2026/05/23 05:23:33.353378 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "ReconciliationCompleted"
+# 2026/05/23 05:23:33.353383 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "NotificationFailed"
+# 2026/05/23 05:23:33.353387 [TestPropClassify_MonotonicInEvidence] [rapid] draw newev: "Pcbb"
+# 2026/05/23 05:23:33.353388 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "notifier"
+# 2026/05/23 05:23:33.353388 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "collector"
+# 2026/05/23 05:23:33.353390 [TestPropClassify_MonotonicInEvidence] [rapid] draw n: 0
+# 2026/05/23 05:23:33.353391 [TestPropClassify_MonotonicInEvidence] [rapid] draw prid: "a"
+# 2026/05/23 05:23:33.353392 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "PaymentDispatched"
+# 2026/05/23 05:23:33.353393 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "ReconciliationCompleted"
+# 2026/05/23 05:23:33.353395 [TestPropClassify_MonotonicInEvidence] [rapid] draw newev: "Ab"
+# 2026/05/23 05:23:33.353396 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "audit"
+# 2026/05/23 05:23:33.353397 [TestPropClassify_MonotonicInEvidence] [rapid] draw pick: "audit"
+# 2026/05/23 05:23:33.353398 [TestPropClassify_MonotonicInEvidence] [rapid] draw n: 1
+# 2026/05/23 05:23:33.353399 [TestPropClassify_MonotonicInEvidence] [rapid] draw path: "events/ReconciliationCompleted/schema.json"
+# 2026/05/23 05:23:33.353400 [TestPropClassify_MonotonicInEvidence] [rapid] draw kind: "ADDED"
+# 2026/05/23 05:23:33.353402 [TestPropClassify_MonotonicInEvidence] [rapid] draw prid: "b"
+# 2026/05/23 05:23:33.353405 [TestPropClassify_MonotonicInEvidence] appending evidence downgraded severity: base="OFF_CATALOGUE" (2) → appended="NON_CONTRACT" (1)
+#   base files=[]
+#   extra files=[ADDED events/ReconciliationCompleted/schema.json]
+# 
+v0.4.8#4176406046721270991
+0x1d3f4601301daf
+0x5
+0x1da9760eedd19b
+0x1
+0x0
+0x1089a355cce775
+0xf
+0x1e5dd775ef9de8
+0x0
+0x4570de3e19609
+0x2
+0x181982bc87feca
+0x0
+0x1afd9248ee9aca
+0x1
+0x16a75533899a52
+0x0
+0x0
+0x1
+0x0
+0xe11360c986b87
+0x1
+0x43753c263154a
+0x3
+0x0
+0x179ccf666ab877
+0x0
+0x0
+0x0
+0x3
+0x0
+0x0
+0x15ebb3541b6af
+0x0
+0x5f0bf59e45b17
+0x2
+0x0
+0x75a366beb0e5e
+0x0
+0x791d75f844bcc
+0x0
+0x2
+0x1
+0x7
+0x2f7b07ae7ba75
+0x0
+0x186e738fd21ba9
+0x0
+0x1ccc65676d0104
+0x2
+0x1
+0x0
+0x1
+0x1
+0x0
+0x0
+0x0
+0x14
+0x1
+0x0
