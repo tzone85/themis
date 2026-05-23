@@ -7,6 +7,7 @@ package aichange
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 )
 
 // FileChangeKind enumerates the ways a file can change in a PR.
@@ -90,34 +91,10 @@ type errFileTouch struct {
 }
 
 func (e errFileTouch) Error() string {
-	return "aichange: TouchedFiles[" + itoa(e.index) + "]: invalid ChangeKind " + string(e.kind)
+	return "aichange: TouchedFiles[" + strconv.Itoa(e.index) + "]: invalid ChangeKind " + string(e.kind)
 }
 
 func (e errFileTouch) Unwrap() error { return ErrInvalidChangeKind }
-
-// itoa is a tiny strconv-free int formatter so this package has no
-// dependency cycles or imports beyond stdlib.
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var b [20]byte
-	i := len(b)
-	for n > 0 {
-		i--
-		b[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		b[i] = '-'
-	}
-	return string(b[i:])
-}
 
 // MarshalJSON ensures TouchedFiles is always emitted as `[]`, never `null`,
 // so downstream consumers can iterate without nil-checks.

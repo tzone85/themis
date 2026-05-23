@@ -12,28 +12,28 @@ package classify
 type Kind string
 
 const (
-	// KindSchemaBreaking: an event already in the catalogue had its schema
-	// or contract definition changed.
+	// KindSchemaBreaking signals an event already in the catalogue had its
+	// schema or contract definition changed.
 	KindSchemaBreaking Kind = "SCHEMA_BREAKING"
 
-	// KindNewEvent: a new event document was added under events/.
+	// KindNewEvent signals a new event document was added under events/.
 	KindNewEvent Kind = "NEW_EVENT"
 
-	// KindConsumerTouch: a service that consumes one or more events had
-	// its source modified.
+	// KindConsumerTouch signals a service that consumes one or more events
+	// had its source modified.
 	KindConsumerTouch Kind = "CONSUMER_TOUCH"
 
-	// KindProducerTouch: a service that produces one or more events had
-	// its source modified.
+	// KindProducerTouch signals a service that produces one or more events
+	// had its source modified.
 	KindProducerTouch Kind = "PRODUCER_TOUCH"
 
-	// KindDocOnly: every touched file is documentation (markdown, README).
+	// KindDocOnly signals every touched file is documentation (markdown, README).
 	KindDocOnly Kind = "DOC_ONLY"
 
-	// KindOffCatalogue: touched files live outside any catalogue-mapped path.
+	// KindOffCatalogue signals touched files live outside any catalogue-mapped path.
 	KindOffCatalogue Kind = "OFF_CATALOGUE"
 
-	// KindNonContract: touched files are inside the catalogue tree but
+	// KindNonContract signals touched files are inside the catalogue tree but
 	// don't match any contract-bearing pattern (e.g. internal helpers).
 	KindNonContract Kind = "NON_CONTRACT"
 )

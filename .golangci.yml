@@ -39,3 +39,7 @@ linters:
         text: "Error return value of `f.Close` is not checked"
         linters:
           - errcheck   # ReadAll's deferred close: read-only file, error has no actionable handler.
+      - path: internal/catalogue/graph\.go
+        text: "stutters; consider calling this Graph"
+        linters:
+          - revive     # `CatalogueGraph` is the name used throughout the design spec; renaming to bare `Graph` would obscure the audit story.

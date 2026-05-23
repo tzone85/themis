@@ -85,4 +85,41 @@ func TestAIChange_Validate_RejectsBadChangeKind(t *testing.T) {
 	if !errors.Is(err, ErrInvalidChangeKind) {
 		t.Fatalf("error %v should wrap ErrInvalidChangeKind", err)
 	}
+	// Error message must surface both the index and the bad kind so an
+	// operator can find the offending row in a long PR diff.
+	msg := err.Error()
+	if !contains(msg, "TouchedFiles[0]") || !contains(msg, "WUT") {
+		t.Fatalf("error %q should mention index and kind", msg)
+	}
+}
+
+func TestAIChange_Validate_RejectsBadChangeKind_AtIndex(t *testing.T) {
+	c := AIChange{
+		TouchedFiles: []FileTouch{
+			{Path: "ok.go", ChangeKind: FileAdded},
+			{Path: "also-ok.go", ChangeKind: FileModified},
+			{Path: "broken.go", ChangeKind: FileChangeKind("nope")},
+		},
+	}
+	err := c.Validate()
+	if err == nil {
+		t.Fatal("Validate should reject")
+	}
+	if !contains(err.Error(), "TouchedFiles[2]") {
+		t.Fatalf("error %q should reference index 2", err.Error())
+	}
+}
+
+// contains is a strings.Contains shim used only by tests in this file so
+// the production package doesn't pull in the strings dep just for errors.
+func contains(haystack, needle string) bool {
+	if len(needle) == 0 {
+		return true
+	}
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return true
+		}
+	}
+	return false
 }
