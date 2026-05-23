@@ -76,6 +76,8 @@ func DefaultRegistry() *Registry {
 	r.Register("SCAN_FINDING", noopProject)
 	r.Register("DECISION_ISSUED", noopProject)
 	r.Register("POLICY_INVALID", noopProject)
+	r.Register("BOM_BUILT", noopProject)
+	r.Register("BOM_SIGNED", noopProject)
 	return r
 }
 
