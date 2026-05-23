@@ -71,6 +71,8 @@ func DefaultRegistry() *Registry {
 	r.Register("TENANT_INITIALISED", noopProject)
 	r.Register("LEDGER_REPLAYED", noopProject)
 	r.Register("LEDGER_VERIFIED", noopProject)
+	r.Register("CATALOGUE_SYNCED", noopProject)
+	r.Register("IMPACT_CLASSIFIED", noopProject)
 	return r
 }
 

@@ -19,6 +19,8 @@ func TestWiring_DefaultRegistryHasMinimumKinds(t *testing.T) {
 		"TENANT_INITIALISED",
 		"LEDGER_REPLAYED",
 		"LEDGER_VERIFIED",
+		"CATALOGUE_SYNCED",  // Plan 2
+		"IMPACT_CLASSIFIED", // Plan 2
 	}
 	for _, kind := range want {
 		if _, ok := r.Projector(kind); !ok {
