@@ -24,5 +24,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newLedgerCmd())
 	root.AddCommand(newCatalogueCmd())
 	root.AddCommand(newClassifyCmd())
+	root.AddCommand(newPolicyCmd())
+	root.AddCommand(newDecideCmd())
 	return root
 }
