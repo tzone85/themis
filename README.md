@@ -6,9 +6,54 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 3 (Scanners + Policy Engine) implemented.** Plans 1, 2, and 3 are in: foundations, catalogue + classifier, and now the pluggable scanner framework (secrets, PII) plus the YAML-driven policy engine producing `ALLOW`/`REQUIRE_APPROVAL`/`DENY` decisions. New CLI: `themis policy lint`, `themis decide`. See the Changelog below. Plan 4 (BOM + signing + supply-chain scanners) is next.
+> **Plan 4 (AI-BOM + Signing) implemented.** The full pipeline now runs end-to-end: `tenant init → catalogue sync → decide → bom build → bom sign → verify`. Every step emits a tamper-evident ledger event; the BOM is a deterministic, signed JSON-LD document; signatures use ed25519 local keys (Sigstore keyless arrives in a later plan). See the Changelog below. Plan 5 (adapters, MCP surface, web dashboard) is next.
+
+## End-to-end demo
+
+```bash
+go build -o /tmp/themis ./cmd/themis
+DIR=/tmp/themis-demo
+/tmp/themis tenant init --id acme --base "$DIR"
+/tmp/themis catalogue sync --id acme --base "$DIR" \
+  --source ./internal/catalogue/testdata/sample
+echo '{"pr_id":"demo#1","actor":"claude_code","touched_files":[
+  {"path":"README.md","change_kind":"MODIFIED","before_hash":"a","after_hash":"b"}
+]}' > "$DIR/ai.json"
+echo 'version: 1
+default: REQUIRE_APPROVAL
+rules:
+  - name: doc-only allowed
+    when:
+      impact.kind: [DOC_ONLY]
+    then:
+      verdict: ALLOW' > "$DIR/themis.yaml"
+/tmp/themis decide --id acme --base "$DIR" --aichange "$DIR/ai.json" --policy "$DIR/themis.yaml"
+/tmp/themis bom build --id acme --base "$DIR" --pr-id demo#1
+/tmp/themis bom sign  --id acme --base "$DIR" --pr-id demo#1
+/tmp/themis ledger doctor --id acme --base "$DIR"
+```
 
 ## Changelog
+
+### Unreleased — Plan 4 (AI-BOM + Signing)
+
+**Added**
+
+- `internal/bom`:
+  - `BOM` value type with `SchemaVersion="themis.bom.v1"`, references the AIChange, Impact, Findings, Decision, and the current LedgerTip.
+  - `Canonical(BOM)` produces deterministic, timezone-agnostic JSON bytes — same logical inputs always reproduce byte-identical output (proven by tests).
+  - `Hash(BOM)` returns hex SHA-256 of the canonical form.
+- `internal/sign`:
+  - ed25519 keypair management — `GenerateKey`, `LoadOrGenerate(dir)` (creates on first call, 0o600 priv perms, half-present detection).
+  - `Sign(payload, priv)` + `Verify(payload, sig, pub)` with `ErrSign` and `ErrVerify` sentinels for callers to route errors.
+- `internal/ledger` — two new registered kinds: `BOM_BUILT`, `BOM_SIGNED`. Wiring test extended.
+- `themis bom build --id <t> --base <state> --pr-id <id>` — reconstructs the BOM from the ledger's most recent `DECISION_ISSUED` matching `--pr-id`, prints canonical JSON, emits `BOM_BUILT`.
+- `themis bom sign --id <t> --base <state> --pr-id <id>` — rebuilds + signs the BOM with the per-tenant ed25519 keypair (auto-generated on first use), writes `tenants/<id>/bom/<hash>.bom.json` plus `.sig`, emits `BOM_SIGNED` carrying the bom hash, hex signature, and hex public key.
+- End-to-end test (`internal/cli/e2e_test.go`) drives the full lifecycle: tenant init → catalogue sync → decide → bom build → bom sign → verify, asserting every expected ledger kind landed and the Merkle chain remains intact.
+
+**Notes**
+
+- Local ed25519 is the air-gapped fallback per design spec §6.1. Sigstore keyless is intentionally deferred to a later plan; the canonical-bytes + Sign/Verify primitives here are the substrate both paths share.
 
 ### Unreleased — Plan 3 (Scanners + Policy Engine)
 
