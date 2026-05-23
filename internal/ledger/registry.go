@@ -73,6 +73,7 @@ func DefaultRegistry() *Registry {
 	r.Register("LEDGER_VERIFIED", noopProject)
 	r.Register("CATALOGUE_SYNCED", noopProject)
 	r.Register("IMPACT_CLASSIFIED", noopProject)
+	r.Register("SCAN_FINDING", noopProject)
 	return r
 }
 
