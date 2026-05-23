@@ -11,4 +11,11 @@ packages:
   github.com/tzone85/themis/internal/ledger: 90.0
   github.com/tzone85/themis/internal/tenant: 95.0
   github.com/tzone85/themis/internal/cli: 90.0
+  github.com/tzone85/themis/internal/bom: 85.0      # Canonical/Hash json.Encode error wraps are structurally unreachable.
+  github.com/tzone85/themis/internal/sign: 90.0
+  github.com/tzone85/themis/internal/scan: 90.0
+  github.com/tzone85/themis/internal/policy: 90.0
+  github.com/tzone85/themis/internal/aichange: 90.0
+  github.com/tzone85/themis/internal/catalogue: 90.0
+  github.com/tzone85/themis/internal/classify: 90.0
   github.com/tzone85/themis/cmd/themis: 0.0  # main() trampoline; covered indirectly via integration smoke.

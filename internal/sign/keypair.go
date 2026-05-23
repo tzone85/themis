@@ -14,8 +14,9 @@ import (
 	"path/filepath"
 )
 
-// Errors returned by this package wrap ErrSign so callers can route any
-// crypto failure to a BOM_UNSIGNED (Plan 5) ledger event.
+// ErrSign is wrapped by every non-verification error returned by this
+// package so callers can route any crypto failure to a BOM_UNSIGNED
+// (Plan 5) ledger event.
 var ErrSign = errors.New("sign: failure")
 
 // GenerateKey produces a new ed25519 keypair using crypto/rand.
