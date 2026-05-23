@@ -74,6 +74,8 @@ func DefaultRegistry() *Registry {
 	r.Register("CATALOGUE_SYNCED", noopProject)
 	r.Register("IMPACT_CLASSIFIED", noopProject)
 	r.Register("SCAN_FINDING", noopProject)
+	r.Register("DECISION_ISSUED", noopProject)
+	r.Register("POLICY_INVALID", noopProject)
 	return r
 }
 
