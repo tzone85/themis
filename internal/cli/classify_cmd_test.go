@@ -152,3 +152,31 @@ func TestClassifyCmd_RejectsMissingCatalogueSnapshot(t *testing.T) {
 		t.Fatal("classify should fail when no catalogue snapshot exists")
 	}
 }
+
+// TestClassifyCmd_WiringGuard_RefusesIfKindNotRegistered asserts that if the
+// IMPACT_CLASSIFIED kind were ever lost from DefaultRegistry, the classify
+// command refuses to emit. This is the runtime complement to the static
+// wiring test in internal/ledger — together they make "register the kind"
+// a hard precondition for emitting it.
+func TestClassifyCmd_WiringGuard_RefusesIfKindNotRegistered(t *testing.T) {
+	base, id := setupTenantWithSyncedCatalogue(t)
+	change := aichange.AIChange{
+		PRID:  "gh:test#wiring",
+		Actor: "claude_code",
+		TouchedFiles: []aichange.FileTouch{
+			{Path: "README.md", ChangeKind: aichange.FileModified, BeforeHash: "a", AfterHash: "b"},
+		},
+	}
+	cp := writeAIChange(t, t.TempDir(), change)
+
+	emptyReg := ledger.NewRegistry() // no kinds registered at all.
+
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+
+	err := runClassify(cmd, id, base, cp, "", emptyReg)
+	if err == nil {
+		t.Fatal("runClassify should refuse to emit when IMPACT_CLASSIFIED is not registered")
+	}
+}
