@@ -22,5 +22,7 @@ func NewRootCmd() *cobra.Command {
 	root.SetVersionTemplate("themis {{.Version}}\n")
 	root.AddCommand(newTenantCmd())
 	root.AddCommand(newLedgerCmd())
+	root.AddCommand(newCatalogueCmd())
+	root.AddCommand(newClassifyCmd())
 	return root
 }
