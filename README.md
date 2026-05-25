@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 4 (AI-BOM + Signing) implemented.** The full pipeline now runs end-to-end: `tenant init → catalogue sync → decide → bom build → bom sign → verify`. Every step emits a tamper-evident ledger event; the BOM is a deterministic, signed JSON-LD document; signatures use ed25519 local keys (Sigstore keyless arrives in a later plan). See the Changelog below. Plan 5 (adapters, MCP surface, web dashboard) is next.
+> **Plan 5 (Ingest Adapters) implemented.** The pipeline now starts from real-world inputs — a git diff, a Claude Code session transcript, or an operator's manual attestation — and runs end-to-end to a signed AI-BOM. See the Changelog below. Plan 6 (REST API + MCP server + web dashboard) is next.
 
 ## End-to-end demo
 
@@ -34,6 +34,25 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 5 (Ingest Adapters)
+
+**Added**
+
+- `internal/ingest`:
+  - `Adapter` interface + `Inputs` value type; `Resolve(name)` / `All()` registry.
+  - `git_heuristic` — shells `git diff --name-status` against an operator-supplied base ref, hashes each file's content at the base and HEAD blobs, infers the actor from the latest commit's author email (`human:<email>`).
+  - `claude_code_transcript` — parses a Claude Code session JSON export, attaches `session_id`/`model`/`user` to metadata, records the SHA-256 of the raw transcript so the audit trail can later prove which transcript was consumed.
+  - `manual_attestation` — operator-declared change shape via repeatable `--file path=before,after` flags; only accepts `human:*` actors so it can't be used to retroactively label changes as AI-authored.
+  - Every adapter wraps `ErrAdapterFailed` on failure so the CLI routes errors to a single `INGEST_ADAPTER_FAILED` ledger event.
+- `internal/ledger` — two new registered kinds: `INGEST_COMPLETED`, `INGEST_ADAPTER_FAILED`. Wiring test extended.
+- `themis ingest --id <t> --base <state> --adapter <name> --pr-id <id> [...adapter flags]` — runs an adapter, validates output, writes the AIChange JSON to `tenants/<id>/aichange/<sanitised-pr>.json`, and emits `INGEST_COMPLETED` (or `INGEST_ADAPTER_FAILED`).
+- `TestE2E_RealGitRepo` — proves the full pipeline against a real git workspace: `tenant init → catalogue sync → ingest (git_heuristic) → decide → bom build → bom sign → verify`.
+
+**Notes**
+
+- The git_heuristic adapter hashes file contents with raw SHA-256 (not git's own blob SHA) so AIChange hashes are portable across git versions and consistent with the rest of the Themis hashing surface.
+- File-flag parsing is deliberately strict — a malformed `--file` value is rejected before any ledger writes happen, so partial state never lands.
 
 ### Unreleased — Plan 4 (AI-BOM + Signing)
 
