@@ -86,6 +86,12 @@ func DefaultRegistry() *Registry {
 	r.Register("EMERGENCY_OVERRIDE_INVOKED", noopProject)
 	r.Register("OVERRIDE_POSTMORTEM_DUE", noopProject)
 	r.Register("OVERRIDE_POSTMORTEM_CLOSED", noopProject)
+	r.Register("ENFORCEMENT_MISSING", noopProject)
+	r.Register("LEDGER_ANCHOR", noopProject)
+	// LEDGER_INTEGRITY_BROKEN lives in the sidecar incidents.jsonl (the main
+	// ledger is, by definition, untrustworthy at the moment we record it),
+	// but its schema is still documented here so consumers know how to decode it.
+	r.Register("LEDGER_INTEGRITY_BROKEN", noopProject)
 	return r
 }
 

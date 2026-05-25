@@ -34,6 +34,9 @@ func TestWiring_DefaultRegistryHasMinimumKinds(t *testing.T) {
 		"EMERGENCY_OVERRIDE_INVOKED", // Plan 10
 		"OVERRIDE_POSTMORTEM_DUE",    // Plan 10
 		"OVERRIDE_POSTMORTEM_CLOSED", // Plan 10
+		"ENFORCEMENT_MISSING",        // Plan 11
+		"LEDGER_ANCHOR",              // Plan 11
+		"LEDGER_INTEGRITY_BROKEN",    // Plan 11 (sidecar incidents.jsonl)
 	}
 	for _, kind := range want {
 		if _, ok := r.Projector(kind); !ok {
