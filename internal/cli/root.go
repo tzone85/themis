@@ -31,5 +31,6 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newServeCmd())
 	root.AddCommand(newMCPCmd())
 	root.AddCommand(newApprovalCmd())
+	root.AddCommand(newOverrideCmd())
 	return root
 }
