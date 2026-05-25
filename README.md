@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 8 (MCP server + embedded dashboard) implemented.** Themis now ships a vanilla-JS audit dashboard served at `/` from the same Go binary, a paginated `GET /v1/tenants/{id}/events` timeline endpoint, and a stdio MCP server (`themis mcp`) that bridges Claude Code / Cursor / VXD agent loops to the existing REST surface — the "agentic-first surface" pillar of the design spec is now live. See the Changelog below.
+> **Plan 9 (Approval flows) implemented.** `REQUIRE_APPROVAL` decisions can now be resolved end-to-end: named approvers grant or deny via CLI or REST, and the system automatically emits `DECISION_FINALISED` once every required role has signed off. Denials are sticky for the current decision; a fresh `themis decide` is required to retry. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,24 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 9 (Approval flows)
+
+**Added**
+
+- `internal/approvals` — pure functions over a ledger slice:
+  - `Compute(events, pr_id)` returns the per-PR status: matched decision, granted-role set, sticky denial state, finalisation state, projected verdict.
+  - `CanFinalise(status)` reports whether the current state is ripe for `DECISION_FINALISED` (denial → DENY, all required roles granted → ALLOW, otherwise stays REQUIRE_APPROVAL).
+  - `BuildFinalised(status, pr_id, now)` constructs the `FinalisedPayload` envelope embedded in the `DECISION_FINALISED` event.
+  - 12 unit tests cover: no decision yet, ALLOW passthrough, single-role grant, partial multi-role grant (not finalised), full multi-role grant (ALLOW), denial (DENY), denial sticky across later grants, re-decide resets approvals, already-finalised handling, no-required-roles (any grant ALLOWs), BuildFinalised captures grants, and PR isolation.
+- `themis approval grant / deny / status` CLI subcommands. `grant` and `deny` append the corresponding ledger event and emit `DECISION_FINALISED` when the state is ripe; `status` prints the current `Status` as JSON.
+- `POST /v1/tenants/{id}/approvals` + `GET /v1/tenants/{id}/approvals?pr_id=…` — same semantics as the CLI, with status codes that surface real failure modes: 400 on bad body, 401 missing auth, 404 unknown PR, 409 already finalised, 405 wrong method.
+- Three new registered ledger event kinds: `APPROVAL_GRANTED`, `APPROVAL_DENIED`, `DECISION_FINALISED`. Wiring test extended; all three are reachable through both surfaces.
+
+**Notes**
+
+- Denials are deliberately sticky for the current decision: a later grant doesn't unblock a denial. The only way to clear a denial is to issue a fresh `DECISION_ISSUED` (i.e. re-run `themis decide` after the diff changes), which models real-world re-review semantics correctly.
+- The approval logic lives in a pure package with no I/O; the CLI/API layers just append events and re-run `Compute`. This makes the audit story trivial — the ledger alone reconstructs the entire approval history.
 
 ### Unreleased — Plan 8 (MCP server + embedded dashboard)
 
