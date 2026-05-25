@@ -8,17 +8,31 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 > **Plan 18 (OIDC TokenStore + ChainStore) implemented.** The Plan-12 `TokenStore` interface now has an OIDC implementation that validates Bearer tokens by calling an IdP's `/userinfo` endpoint, with per-token caching (configurable TTL) and a pluggable `ClaimMapper` so any IdP claim scheme can drive the `(tenant, role)` mapping. A `ChainStore` composes multiple stores in order (e.g. file YAML first, OIDC fallback) and short-circuits on hard errors rather than silently falling back to a weaker ACL. **The entire deferred-items list from Plan 11 is now done.** See the Changelog below.
 
-## End-to-end demo
+## Quickstart
+
+For a guided, top-to-bottom walkthrough see [`docs/onboarding/README.md`](docs/onboarding/README.md).
+This block is the smallest possible end-to-end demo.
 
 ```bash
 go build -o /tmp/themis ./cmd/themis
 DIR=/tmp/themis-demo
+
+# 1. Tenant bootstrap.
 /tmp/themis tenant init --id acme --base "$DIR"
+
+# 2. Mint an admin token for the tenant.
+/tmp/themis tokens grant --base "$DIR" --tenant acme --role admin --description quickstart
+
+# 3. Catalogue snapshot (uses the bundled sample tree).
 /tmp/themis catalogue sync --id acme --base "$DIR" \
   --source ./internal/catalogue/testdata/sample
-echo '{"pr_id":"demo#1","actor":"claude_code","touched_files":[
-  {"path":"README.md","change_kind":"MODIFIED","before_hash":"a","after_hash":"b"}
-]}' > "$DIR/ai.json"
+
+# 4. Ingest a real PR via git_heuristic (or write your own AIChange JSON).
+/tmp/themis ingest --id acme --base "$DIR" \
+  --adapter git_heuristic --pr-id "demo#1" \
+  --workdir "$PWD" --base-ref HEAD~1
+
+# 5. Policy + decide.
 echo 'version: 1
 default: REQUIRE_APPROVAL
 rules:
@@ -27,10 +41,24 @@ rules:
       impact.kind: [DOC_ONLY]
     then:
       verdict: ALLOW' > "$DIR/themis.yaml"
-/tmp/themis decide --id acme --base "$DIR" --aichange "$DIR/ai.json" --policy "$DIR/themis.yaml"
-/tmp/themis bom build --id acme --base "$DIR" --pr-id demo#1
-/tmp/themis bom sign  --id acme --base "$DIR" --pr-id demo#1
+/tmp/themis decide --id acme --base "$DIR" \
+  --aichange "$DIR/tenants/acme/aichange/demo_1.json" \
+  --policy "$DIR/themis.yaml"
+
+# 6. Build + sign the BOM (local ed25519; cosign-keyless-stub also available).
+/tmp/themis bom build --id acme --base "$DIR" --pr-id "demo#1"
+/tmp/themis bom sign  --id acme --base "$DIR" --pr-id "demo#1"
+
+# 7. Get an LLM-style advisory note (NullLLM by default).
+/tmp/themis advise --id acme --base "$DIR" --pr-id "demo#1"
+
+# 8. Ledger integrity + external anchor.
 /tmp/themis ledger doctor --id acme --base "$DIR"
+/tmp/themis ledger anchor --id acme --base "$DIR" --sink "s3://demo/"
+
+# 9. Start the REST API + dashboard.
+/tmp/themis serve --base "$DIR" --addr 127.0.0.1:8787 &
+open http://127.0.0.1:8787/?tenant=acme    # the dashboard
 ```
 
 ## Changelog
