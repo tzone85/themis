@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 10 (Emergency override) implemented.** The full trust-layer story from design spec §9.1.1 is now in: a named actor with a co-signer can override a DENY decision via `themis override invoke`, but only with a ≥ 50-character reason and a time-boxed expiry — and the system automatically schedules a 7-day post-mortem that compliance MUST close (`themis override close-postmortem`) before the obligation goes overdue. See the Changelog below.
+> **Plan 11 (Heartbeat + integrity tracking) implemented.** The remaining trust-layer pieces from design spec §9.1.2 and §9.1.3 are now in: `themis ledger verify` auto-emits a `LEDGER_INTEGRITY_BROKEN` record to a sidecar `incidents.jsonl` on any chain break; `themis ledger anchor` publishes the current tip hash as a `LEDGER_ANCHOR` event for external transparency-log uploads; and `themis heartbeat report` lets external monitoring record `ENFORCEMENT_MISSING` when a required check disappears from a tenant repo. All three flows have CLI + REST parity. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,25 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 11 (Heartbeat + integrity tracking)
+
+**Added**
+
+- `internal/incidents` — sidecar `tenants/<id>/incidents.jsonl` ledger for events that *cannot* live in the main events.jsonl chain (the canonical example: the very record of "the main chain is broken"). One row per line, `{kind, ts, payload}`, 0o600 permissions. 6 unit tests cover happy path, missing-file, empty-kind rejection, nil-payload defaulting, corrupt-line detection, per-tenant path scoping.
+- `themis ledger verify` now auto-records `LEDGER_INTEGRITY_BROKEN` to the sidecar when a chain break is detected — the main ledger can't reliably record its own failure, so this is the load-bearing piece of design spec §9.1.3.
+- `themis ledger anchor [--sink <id>]` — refuses if the chain is broken (no point anchoring a tampered tip), otherwise appends a `LEDGER_ANCHOR` event with `{tip_hash, event_count, anchored_at, sink}`. Operators schedule the actual upload to S3 / transparency log / public git repo via cron.
+- `themis heartbeat report --repo X --expected-check Y --reported-by Z` — appends an `ENFORCEMENT_MISSING` event so external monitoring (a GitHub Action heartbeat, Argo CD policy probe, synthetic monitor) can record "this repo no longer has its required Themis check" — the deadman-switch dataplane (design spec §9.1.2).
+- REST API parity:
+  - `POST /v1/tenants/{id}/heartbeat` — record an enforcement-missing signal.
+  - `POST /v1/tenants/{id}/anchor` — emit `LEDGER_ANCHOR` (409 on broken chain).
+  - `GET  /v1/tenants/{id}/incidents` — read the sidecar JSONL as JSON.
+- Three new registered ledger event kinds: `ENFORCEMENT_MISSING`, `LEDGER_ANCHOR`, `LEDGER_INTEGRITY_BROKEN` (the last is documented in `DefaultRegistry` for consumer-decoder symmetry even though it never appears in the main chain). Wiring test extended.
+
+**Notes**
+
+- The "deadman switch" daemon that *polls* repos for missing checks is intentionally deferred — Plan 11 ships the dataplane (where the signal lands) so any operator-side observer can wire in immediately without waiting for the centralised poller.
+- `LEDGER_ANCHOR` deliberately does not perform the upload itself: that requires per-tenant credentials and external infrastructure choices we want to keep out of the core binary.
 
 ### Unreleased — Plan 10 (Emergency override)
 
