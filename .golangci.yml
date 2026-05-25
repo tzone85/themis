@@ -25,6 +25,8 @@ linters:
       excludes:
         - G104  # errcheck handles this; gosec double-reports
         - G304  # file paths come from validated Tenant.Events()/Projection() calls.
+        - G703  # taint-analysis variant of G304; same justification.
+        - G705  # taint-analysis XSS check; we set Content-Type application/json before writing audit JSON.
 
   exclusions:
     rules:
