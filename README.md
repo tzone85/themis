@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 9 (Approval flows) implemented.** `REQUIRE_APPROVAL` decisions can now be resolved end-to-end: named approvers grant or deny via CLI or REST, and the system automatically emits `DECISION_FINALISED` once every required role has signed off. Denials are sticky for the current decision; a fresh `themis decide` is required to retry. See the Changelog below.
+> **Plan 10 (Emergency override) implemented.** The full trust-layer story from design spec §9.1.1 is now in: a named actor with a co-signer can override a DENY decision via `themis override invoke`, but only with a ≥ 50-character reason and a time-boxed expiry — and the system automatically schedules a 7-day post-mortem that compliance MUST close (`themis override close-postmortem`) before the obligation goes overdue. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,29 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 10 (Emergency override)
+
+**Added**
+
+- `internal/override` — pure value-type + status package:
+  - `InvokePayload`, `PostmortemDuePayload`, `PostmortemClosedPayload` mirroring the three new ledger event payloads.
+  - `ValidateInvoke(payload, now)` enforces: ≥ 50-char reason, present actor + co-signer, distinct identities, future expiry.
+  - `BuildInvoke(payload, now)` fills timestamps + default 24h expiry + 7-day post-mortem due window.
+  - `Compute(events, pr_id, now)` returns `{active, expired, postmortem_due, postmortem_closed, postmortem_overdue, actor, co_signer}` — the full state for a PR.
+  - 12 unit tests covering: happy path, short-reason rejection, missing fields, actor==co-signer rejection, past-expiry rejection, default 24h expiry, active-before-expiry, expired-after-TTL, overdue post-mortem, closed clears overdue, BuildClosed shape, isolation across PRs.
+- `themis override invoke / close-postmortem / status` CLI subcommands. `invoke` appends both `EMERGENCY_OVERRIDE_INVOKED` and `OVERRIDE_POSTMORTEM_DUE` so the timeline carries the obligation explicitly.
+- API endpoints — full parity with the CLI:
+  - `POST /v1/tenants/{id}/overrides` — invoke
+  - `GET /v1/tenants/{id}/overrides?pr_id=…` — status
+  - `POST /v1/tenants/{id}/overrides/postmortem` — close post-mortem
+  - Status codes: 400 bad body, 401 missing auth, 404 unknown PR / unknown sub-route, 405 wrong method, 409 already closed.
+- Three new registered ledger event kinds: `EMERGENCY_OVERRIDE_INVOKED`, `OVERRIDE_POSTMORTEM_DUE`, `OVERRIDE_POSTMORTEM_CLOSED`. Wiring test extended.
+
+**Notes**
+
+- Constants are derived from the design spec, not configurable: `MinReasonLength = 50`, `DefaultDuration = 24h`, `PostmortemWindow = 7 * 24h`. Plan 11 may add a per-tenant policy override layer for these once the regulator-mapping work begins.
+- The `actor != co_signer` rule prevents one human from satisfying the trust requirement alone — the design spec calls this out as the load-bearing piece of the override flow.
 
 ### Unreleased — Plan 9 (Approval flows)
 
