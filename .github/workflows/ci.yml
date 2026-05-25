@@ -22,7 +22,7 @@ jobs:
         with:
           # v2 binary required: .golangci.yml uses the v2 schema
           # (linters.settings, linters.exclusions, top-level version: "2").
-          version: v2.1.0
+          version: v2.12.2
       - name: test
         run: go test -race -count=1 -coverprofile=coverage.out -covermode=atomic ./...
       - name: coverage gate
