@@ -78,6 +78,8 @@ func DefaultRegistry() *Registry {
 	r.Register("POLICY_INVALID", noopProject)
 	r.Register("BOM_BUILT", noopProject)
 	r.Register("BOM_SIGNED", noopProject)
+	r.Register("INGEST_COMPLETED", noopProject)
+	r.Register("INGEST_ADAPTER_FAILED", noopProject)
 	return r
 }
 
