@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 15 (Heartbeat polling daemon) implemented.** `themis heartbeat run-once` / `themis heartbeat watch` actively probe each tenant repo via a `Checker` abstraction (`stub` implementation in-box; GitHub/GitLab adapters drop in unchanged) and emit `ENFORCEMENT_MISSING` for any target where the required check is no longer installed. Per-tenant target list lives in `tenants/<id>/heartbeat.yaml`. The Watch loop terminates cleanly on SIGINT/SIGTERM. See the Changelog below.
+> **Plans 16 + 17 (Mempalace bridge + Advisory agent) implemented.** A content-addressed Mempalace wing writer lives at `internal/mempalace`; the advisory agent (`internal/advisor`) drafts a plain-language review note from any DECISION_ISSUED and persists it as a drawer file. `themis advise --id <t> --pr-id <p>` ties them together. Real LLM providers and the upstream Mempalace daemon plug in behind the same interfaces. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,27 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plans 16 + 17 (Mempalace bridge + Advisory agent)
+
+**Added**
+
+- `internal/mempalace`:
+  - `Bridge.Write(Drawer)` writes content-addressed JSON drawers to `tenants/<id>/mempalace-wing/<kind>/<sha256>.json`.
+  - Read/List helpers + per-tenant `WingDir()` scoping. 6 unit tests.
+  - Decoupled from the upstream Mempalace daemon by design — drawers are plain JSON files; the daemon (or any consumer) reads them out of band.
+- `internal/advisor`:
+  - `LLM` interface with `Name` + `Generate(ctx, prompt)`.
+  - `NullLLM` deterministic fallback (no network, no surprises) — useful for tests, air-gapped deployments, and as the bottom of a real-LLM fallback chain.
+  - `Draft(ctx, llm, Input)` composes a deterministic prompt (so the audit trail is reproducible) and returns `{Text, Summary, BackedBy}`.
+  - Strict separation per design spec §5.1: the advisor produces *suggestion* text only; the deterministic policy engine still issues the verdict.
+  - 8 unit tests cover ALLOW/REQUIRE_APPROVAL/DENY paths, summary aggregation, empty-input + nil-LLM defaults, LLM error propagation.
+- `themis advise --id <t> --pr-id <p> [--llm null]` — walks the ledger to the matching DECISION_ISSUED, drafts a note, writes it to the Mempalace wing as an `advisor-note` drawer, prints the note + drawer path. 3 CLI tests.
+
+**Notes**
+
+- The advisor is *never* on the trust-critical path — it produces text only. Compliance dashboards render the note next to the deterministic verdict, but the verdict itself comes from the pure policy engine.
+- Real provider adapters (OpenAI / Anthropic / local llama.cpp) implement `LLM.Generate` and are picked via `--llm <name>` — the Plan-17 surface stays unchanged.
 
 ### Unreleased — Plan 15 (Heartbeat polling daemon)
 

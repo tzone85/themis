@@ -34,5 +34,6 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newOverrideCmd())
 	root.AddCommand(newHeartbeatCmd())
 	root.AddCommand(newTokensCmd())
+	root.AddCommand(newAdviseCmd())
 	return root
 }
