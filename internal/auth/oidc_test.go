@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// stubIdP simulates an OIDC /userinfo endpoint with configurable responses.
-func stubIdP(t *testing.T, responder func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, *OIDCTokenStore) {
+// stubIDP simulates an OIDC /userinfo endpoint with configurable responses.
+func stubIDP(t *testing.T, responder func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, *OIDCTokenStore) {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(responder))
 	t.Cleanup(srv.Close)
@@ -20,7 +20,7 @@ func stubIdP(t *testing.T, responder func(w http.ResponseWriter, r *http.Request
 }
 
 func TestOIDC_LookupHappyPath(t *testing.T) {
-	_, store := stubIdP(t, func(w http.ResponseWriter, r *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer good-token" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -38,7 +38,7 @@ func TestOIDC_LookupHappyPath(t *testing.T) {
 }
 
 func TestOIDC_LookupUnauthorizedMapsToErrUnauthorized(t *testing.T) {
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no", http.StatusUnauthorized)
 	})
 	_, err := store.Lookup("nope")
@@ -48,7 +48,7 @@ func TestOIDC_LookupUnauthorizedMapsToErrUnauthorized(t *testing.T) {
 }
 
 func TestOIDC_LookupServerErrorWrapsErrOIDC(t *testing.T) {
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	})
 	_, err := store.Lookup("anything")
@@ -58,7 +58,7 @@ func TestOIDC_LookupServerErrorWrapsErrOIDC(t *testing.T) {
 }
 
 func TestOIDC_LookupRejectsEmptyToken(t *testing.T) {
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {})
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {})
 	if _, err := store.Lookup(""); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
@@ -84,7 +84,7 @@ func TestOIDC_DefaultClaimMapperRejectsMissingClaims(t *testing.T) {
 }
 
 func TestOIDC_CustomClaimMapper(t *testing.T) {
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"sub":"alice","groups":["themis-acme-admin"]}`))
 	})
@@ -109,7 +109,7 @@ func TestOIDC_CustomClaimMapper(t *testing.T) {
 
 func TestOIDC_CacheReusesIdentity(t *testing.T) {
 	calls := 0
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"tenant":"acme","role":"dev"}`))
@@ -129,7 +129,7 @@ func TestOIDC_CacheReusesIdentity(t *testing.T) {
 
 func TestOIDC_CacheExpiresAfterTTL(t *testing.T) {
 	calls := 0
-	_, store := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, store := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"tenant":"acme","role":"dev"}`))
@@ -153,7 +153,7 @@ tokens:
     role: "dev"
 `)
 	yaml := NewFileTokenStore(base)
-	_, oidc := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, oidc := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"tenant":"acme","role":"admin"}`))
 	})
@@ -172,7 +172,7 @@ func TestChainStore_FallsThroughOnUnauthorized(t *testing.T) {
 	base := t.TempDir()
 	writeTokensYAML(t, base, "tokens: []") // yaml doesn't know the token
 	yaml := NewFileTokenStore(base)
-	_, oidc := stubIdP(t, func(w http.ResponseWriter, _ *http.Request) {
+	_, oidc := stubIDP(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"tenant":"acme","role":"admin"}`))
 	})
