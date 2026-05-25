@@ -1,0 +1,59 @@
+name: 'Themis Check'
+description: 'Run a Themis policy decision against the current pull request and gate the build accordingly.'
+author: 'Thando Mini'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  themis-base-url:
+    description: 'Base URL of the Themis API server (e.g. https://themis.example.org).'
+    required: true
+  themis-token:
+    description: 'Bearer token for the tenant. Provide via GitHub Actions secrets.'
+    required: true
+  tenant-id:
+    description: 'Themis tenant identifier.'
+    required: true
+  pr-id:
+    description: 'Pull request identifier. Defaults to "gh:<repo>#<pr-number>" when running on pull_request events.'
+    required: false
+    default: ''
+  policy-path:
+    description: 'Path to the policy YAML inside the checked-out repository.'
+    required: true
+  actor:
+    description: 'Override the AIChange actor. Defaults to "human:<commit-author-email>".'
+    required: false
+    default: ''
+  fail-on-require-approval:
+    description: 'When true, exit non-zero on REQUIRE_APPROVAL verdicts. Default false (only DENY blocks the build).'
+    required: false
+    default: 'false'
+
+outputs:
+  verdict:
+    description: 'The verdict returned by Themis: ALLOW, REQUIRE_APPROVAL, or DENY.'
+    value: ${{ steps.themis.outputs.verdict }}
+  decision-json:
+    description: 'The full JSON-encoded Decision envelope returned by Themis.'
+    value: ${{ steps.themis.outputs.decision-json }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: themis
+      shell: bash
+      env:
+        THEMIS_BASE_URL: ${{ inputs.themis-base-url }}
+        THEMIS_TOKEN: ${{ inputs.themis-token }}
+        THEMIS_TENANT_ID: ${{ inputs.tenant-id }}
+        THEMIS_PR_ID: ${{ inputs.pr-id }}
+        THEMIS_POLICY_PATH: ${{ inputs.policy-path }}
+        THEMIS_ACTOR: ${{ inputs.actor }}
+        THEMIS_FAIL_ON_REQUIRE_APPROVAL: ${{ inputs.fail-on-require-approval }}
+        GH_REPOSITORY: ${{ github.repository }}
+        GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        GH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: ${{ github.action_path }}/../../scripts/themis-check.sh
