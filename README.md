@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 11 (Heartbeat + integrity tracking) implemented.** The remaining trust-layer pieces from design spec §9.1.2 and §9.1.3 are now in: `themis ledger verify` auto-emits a `LEDGER_INTEGRITY_BROKEN` record to a sidecar `incidents.jsonl` on any chain break; `themis ledger anchor` publishes the current tip hash as a `LEDGER_ANCHOR` event for external transparency-log uploads; and `themis heartbeat report` lets external monitoring record `ENFORCEMENT_MISSING` when a required check disappears from a tenant repo. All three flows have CLI + REST parity. See the Changelog below.
+> **Plan 12 (Multi-tenant auth + role model) implemented.** Bearer tokens now resolve to a `(tenant, role)` Identity. Five roles totally ordered: `read < dev < reviewer < compliance < admin`. Endpoint gates enforce minimum role (e.g. POST `/approvals` requires `reviewer`; POST `/anchor` requires `admin`). Legacy `tenants/<id>/api-tokens` files keep working — entries there are treated as `admin` for the tenant. New `themis tokens grant/list/revoke` CLI for managing the structured `tenants/tokens.yaml` store. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,30 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 12 (Multi-tenant auth + role model)
+
+**Added**
+
+- `internal/auth`:
+  - `Role` enum + total order: `read (0) < dev (1) < reviewer (2) < compliance (3) < admin (4)`.
+  - `Identity { Tenant, Role, Token4, Description }` — the resolved subject of an authenticated request.
+  - `TokenStore` interface + `FileTokenStore` that reads `tenants/tokens.yaml` first, falls back to the legacy per-tenant `api-tokens` file (every legacy token = `admin` for that tenant).
+  - Constant-time token compare; per-token `description` carried through to audit.
+  - 14 unit tests cover role ordering, satisfaction, all four lookup paths (YAML, legacy, precedence, missing).
+- `internal/api`:
+  - `RequireIdentity(base, tenant, minRole, r)` middleware returns the resolved Identity or `ErrUnauthorized` / `ErrInsufficientRole`.
+  - Per-action role gates: GET endpoints require `read`; POST `/decide` requires `dev`; POST `/approvals` requires `reviewer`; POST `/overrides` requires `compliance`; POST `/anchor` + `/heartbeat` require `admin`.
+  - 6 role-aware integration tests covering every tier + cross-tenant token rejection (401, not 403).
+- `themis tokens` CLI:
+  - `grant --tenant <t> --role <r> [--description <d>]` — generates a 32-byte `thm_<hex>` token, prints it once, persists to `tokens.yaml`.
+  - `list` — shows last-4 suffix + tenant + role + description (never reprints the full token).
+  - `revoke --token-prefix <p>` — removes matching entries.
+
+**Notes**
+
+- `RequireToken(base, id, r)` is preserved as a thin wrapper around `RequireIdentity` so every Plan 6-11 handler keeps working without changes.
+- The legacy admin-fallback is intentional: an operator with a Plan 6 deployment can upgrade Themis without rewriting their token store; tokens become `admin`-by-default until the operator migrates them into `tokens.yaml` with explicit roles.
 
 ### Unreleased — Plan 11 (Heartbeat + integrity tracking)
 
