@@ -58,10 +58,10 @@ func newBOMBuildCmd() *cobra.Command {
 }
 
 func newBOMSignCmd() *cobra.Command {
-	var id, base, prID string
+	var id, base, prID, signerMode, oidcSubject, oidcIssuer string
 	cmd := &cobra.Command{
 		Use:   "sign",
-		Short: "Build + sign a BOM with the tenant's ed25519 keypair; emit BOM_SIGNED",
+		Short: "Build + sign a BOM with the tenant's signer (local ed25519 or cosign-keyless-stub); emit BOM_SIGNED",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			b, hash, err := buildBOMFromLedger(base, id, prID)
 			if err != nil {
@@ -72,12 +72,15 @@ func newBOMSignCmd() *cobra.Command {
 				return err
 			}
 
-			keyDir := filepath.Join(base, "tenants", id, "keys")
-			priv, pub, err := sign.LoadOrGenerate(keyDir)
+			signer, err := sign.Resolve(sign.Mode(signerMode), sign.ResolveOptions{
+				LocalKeyDir: filepath.Join(base, "tenants", id, "keys"),
+				OIDCSubject: oidcSubject,
+				OIDCIssuer:  oidcIssuer,
+			})
 			if err != nil {
 				return err
 			}
-			signature, err := sign.Sign(canon, priv)
+			bundle, err := signer.Sign(canon)
 			if err != nil {
 				return err
 			}
@@ -88,23 +91,31 @@ func newBOMSignCmd() *cobra.Command {
 			}
 			bomFile := filepath.Join(bomDir, hash+".bom.json")
 			sigFile := bomFile + ".sig"
+			bundleFile := bomFile + ".bundle.json"
 			if err := os.WriteFile(bomFile, canon, 0o600); err != nil {
 				return fmt.Errorf("write bom: %w", err)
 			}
-			if err := os.WriteFile(sigFile, []byte(hex.EncodeToString(signature)), 0o600); err != nil {
+			if err := os.WriteFile(sigFile, []byte(hex.EncodeToString(bundle.Signature)), 0o600); err != nil {
 				return fmt.Errorf("write signature: %w", err)
 			}
+			bundleBytes, _ := json.MarshalIndent(bundle, "", "  ")
+			if err := os.WriteFile(bundleFile, bundleBytes, 0o600); err != nil {
+				return fmt.Errorf("write bundle: %w", err)
+			}
 
-			if err := appendBOMSignedEvent(base, id, b, hash, signature, pub); err != nil {
+			if err := appendBOMSignedEvent(base, id, b, hash, bundle.Signature, bundle.PublicKey); err != nil {
 				return err
 			}
 
 			out := map[string]string{
-				"bom_hash":        hash,
-				"signature_hex":   hex.EncodeToString(signature),
-				"public_key_hex":  hex.EncodeToString(pub),
-				"bom_path":        bomFile,
-				"signature_path":  sigFile,
+				"bom_hash":       hash,
+				"signature_hex":  hex.EncodeToString(bundle.Signature),
+				"public_key_hex": hex.EncodeToString(bundle.PublicKey),
+				"signer_mode":    string(bundle.Mode),
+				"rekor_url":      bundle.RekorURL,
+				"bom_path":       bomFile,
+				"signature_path": sigFile,
+				"bundle_path":    bundleFile,
 			}
 			enc := json.NewEncoder(cmd.OutOrStdout())
 			enc.SetIndent("", "  ")
@@ -114,6 +125,9 @@ func newBOMSignCmd() *cobra.Command {
 	cmd.Flags().StringVar(&id, "id", "", "tenant id")
 	cmd.Flags().StringVar(&base, "base", "", "base state directory")
 	cmd.Flags().StringVar(&prID, "pr-id", "", "PR identifier (matches DECISION_ISSUED.payload.pr_id)")
+	cmd.Flags().StringVar(&signerMode, "signer", "local-ed25519", "signer mode: local-ed25519 | cosign-keyless-stub")
+	cmd.Flags().StringVar(&oidcSubject, "oidc-subject", "", "OIDC subject (required for cosign-keyless-stub)")
+	cmd.Flags().StringVar(&oidcIssuer, "oidc-issuer", "https://oidc.example.com", "OIDC issuer URL (cosign-keyless-stub)")
 	_ = cmd.MarkFlagRequired("id")
 	_ = cmd.MarkFlagRequired("base")
 	_ = cmd.MarkFlagRequired("pr-id")

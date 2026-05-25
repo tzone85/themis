@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 13 (Supply-chain scanners) implemented.** Two new scanners now ship in `scan.DefaultScanners()`: a slopsquat detector (small-edit-distance to popular packages) and a hallucinated-imports detector (unknown to the bundled package oracle). Both inspect `package.json`, `requirements.txt`, and `go.mod` files via the existing `workdir_files` plumbing. The bundled `StaticOracle` ships an offline allowlist per ecosystem; production deployments swap in a `PackageOracle` impl backed by their preferred feed. See the Changelog below.
+> **Plan 14 (Pluggable Signer + Sigstore-keyless stub) implemented.** BOM signing now goes through a `sign.Signer` interface; the Plan-4 ed25519 path is now `local-ed25519`, and a `cosign-keyless-stub` mode runs offline with the *shape* of Sigstore keyless (ephemeral key, stub Fulcio cert, synthesised Rekor URL) so the real Fulcio/Rekor adapter can drop in without changing callers. `themis bom sign --signer cosign-keyless-stub --oidc-subject alice@example.com` works end-to-end today. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,23 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 14 (Pluggable Signer + Sigstore-keyless stub)
+
+**Added**
+
+- `internal/sign/signer.go`:
+  - `Signer` interface (`Mode`, `Sign`, `Verify`) and universal `SignedBundle` envelope (`Mode`, `Signature`, `PublicKey`, `Certificate`, `RekorURL`, `Subject`, `SignedAt`).
+  - `LocalSigner` (Plan-4 ed25519) implementing `Signer`.
+  - `CosignKeylessStub` implementing `Signer` offline — ephemeral ed25519 keypair per invocation, embedded "Fulcio-style" stub certificate, synthesised Rekor URL. The real `CosignKeyless` adapter will swap in without changing callers.
+  - `Resolve(mode, opts)` factory + `ResolveOptions{LocalKeyDir, OIDCSubject, OIDCIssuer}`.
+  - 15 tests cover both modes: sign-verify round-trip, tampered-payload rejection, subject mismatch, mode mismatch, missing/corrupt certificate, factory default + unknown-mode errors.
+- `themis bom sign --signer <mode> [--oidc-subject <s>] [--oidc-issuer <url>]` — selects between `local-ed25519` and `cosign-keyless-stub`. The signed bundle is written to `tenants/<id>/bom/<hash>.bom.json.bundle.json` alongside the existing `.sig` sidecar so callers can rely on either format.
+- CLI integration test drives the keyless-stub flow end-to-end and verifies the bundle with an independently constructed verifier.
+
+**Notes**
+
+- The stub deliberately does not pretend to actually contact Sigstore — it only mirrors the *bundle shape* so downstream code that consumes bundles can be written + tested today. When operators ship Sigstore credentials, the implementation behind `Resolve(ModeCosignKeyless, …)` becomes a real Fulcio+Rekor adapter and nothing else changes.
 
 ### Unreleased — Plan 13 (Supply-chain scanners)
 

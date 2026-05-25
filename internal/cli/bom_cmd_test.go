@@ -127,6 +127,51 @@ func TestBOMSign_SignsAndVerifies(t *testing.T) {
 	}
 }
 
+func TestBOMSign_CosignKeylessStub_RoundTrip(t *testing.T) {
+	base, id := runDecideOnce(t, "gh:test#bom-cosign")
+	out := &bytes.Buffer{}
+	cmd := NewRootCmd()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{
+		"bom", "sign",
+		"--id", id, "--base", base,
+		"--pr-id", "gh:test#bom-cosign",
+		"--signer", "cosign-keyless-stub",
+		"--oidc-subject", "alice@example.com",
+	})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("bom sign --signer cosign-keyless-stub: %v\n%s", err, out.String())
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if got["signer_mode"] != "cosign-keyless-stub" {
+		t.Fatalf("signer_mode = %q", got["signer_mode"])
+	}
+	if got["rekor_url"] == "" {
+		t.Fatal("rekor_url should be populated for keyless mode")
+	}
+
+	// Load the bundle file and verify with a freshly-constructed stub signer.
+	bundleRaw, err := os.ReadFile(got["bundle_path"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bundle sign.SignedBundle
+	if err := json.Unmarshal(bundleRaw, &bundle); err != nil {
+		t.Fatal(err)
+	}
+
+	canon, _ := os.ReadFile(got["bom_path"])
+	verifier := sign.NewCosignKeylessStub("alice@example.com", "https://oidc.example.com")
+	if err := verifier.Verify(canon, bundle); err != nil {
+		t.Fatalf("verify cosign-keyless-stub bundle: %v", err)
+	}
+}
+
 func TestBOMSign_TamperedBOMFailsVerify(t *testing.T) {
 	base, id := runDecideOnce(t, "gh:test#bom-tamper")
 	out := &bytes.Buffer{}
