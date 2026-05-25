@@ -117,6 +117,52 @@ func TestLedgerVerify_OnUntamperedDoesNotEmitIncident(t *testing.T) {
 	}
 }
 
+func TestLedgerAnchor_AppendsTipHashEvent(t *testing.T) {
+	base, id := setupTenant(t)
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"ledger", "anchor", "--id", id, "--base", base, "--sink", "s3://test-bucket/themis/"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("anchor: %v", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("anchor output not JSON: %v\n%s", err, out.String())
+	}
+	if h, ok := payload["tip_hash"].(string); !ok || h == "" {
+		t.Fatalf("anchor missing tip_hash: %+v", payload)
+	}
+	if payload["sink"] != "s3://test-bucket/themis/" {
+		t.Errorf("sink = %v", payload["sink"])
+	}
+
+	events, _ := ledger.ReadAll(filepath.Join(base, "tenants", id, "events.jsonl"))
+	if events[len(events)-1].Kind != "LEDGER_ANCHOR" {
+		t.Fatalf("last event = %q, want LEDGER_ANCHOR", events[len(events)-1].Kind)
+	}
+}
+
+func TestLedgerAnchor_RefusesOnBrokenChain(t *testing.T) {
+	base, id := setupTenant(t)
+	appendExtraEvent(t, base, id)
+	// Tamper the ledger so anchor refuses.
+	eventsPath := filepath.Join(base, "tenants", id, "events.jsonl")
+	raw, _ := os.ReadFile(eventsPath)
+	raw[10] ^= 0x01
+	_ = os.WriteFile(eventsPath, raw, 0o600)
+
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"ledger", "anchor", "--id", id, "--base", base})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("anchor should refuse on tampered ledger")
+	}
+}
+
 func TestLedgerReplay_RebuildsProjection(t *testing.T) {
 	base, id := setupTenant(t)
 	projPath := filepath.Join(base, "tenants", id, "projection.sqlite")

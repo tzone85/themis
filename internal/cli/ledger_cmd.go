@@ -14,7 +14,73 @@ import (
 
 func newLedgerCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "ledger", Short: "Inspect, replay, and verify tenant ledgers"}
-	cmd.AddCommand(newLedgerDoctorCmd(), newLedgerVerifyCmd(), newLedgerReplayCmd())
+	cmd.AddCommand(
+		newLedgerDoctorCmd(),
+		newLedgerVerifyCmd(),
+		newLedgerReplayCmd(),
+		newLedgerAnchorCmd(),
+	)
+	return cmd
+}
+
+// newLedgerAnchorCmd writes a LEDGER_ANCHOR event recording the current
+// tip hash + event count. Optional --sink names the external transparency
+// log the operator plans to publish to; upload itself is intentionally
+// out-of-scope at Plan 11 — operators schedule it via cron + their own
+// uploader and pass the same --sink string each run for audit traceability.
+func newLedgerAnchorCmd() *cobra.Command {
+	var id, base, sink string
+	cmd := &cobra.Command{
+		Use:   "anchor",
+		Short: "Append a LEDGER_ANCHOR event with the current tip hash for external publication",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			eventsPath, _ := tenantPaths(base, id)
+			rep, err := ledger.Doctor(eventsPath)
+			if err != nil {
+				return fmt.Errorf("doctor: %w", err)
+			}
+			if !rep.ChainIntact {
+				return fmt.Errorf("refusing to anchor: chain not intact (%s)", rep.ChainError)
+			}
+
+			s, err := ledger.OpenStore(eventsPath)
+			if err != nil {
+				return fmt.Errorf("open store: %w", err)
+			}
+			defer func() { _ = s.Close() }()
+
+			now := time.Now().UTC()
+			payload, _ := json.Marshal(map[string]any{
+				"tip_hash":    rep.LastHash,
+				"event_count": rep.EventCount,
+				"anchored_at": now.Format(time.RFC3339Nano),
+				"sink":        sink,
+			})
+			if _, err := s.Append(ledger.Event{
+				Kind:      "LEDGER_ANCHOR",
+				Tenant:    id,
+				Timestamp: now,
+				Payload:   payload,
+				PrevHash:  s.LastHash(),
+			}); err != nil {
+				return fmt.Errorf("append LEDGER_ANCHOR: %w", err)
+			}
+
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(map[string]any{
+				"tip_hash":    rep.LastHash,
+				"event_count": rep.EventCount,
+				"sink":        sink,
+				"anchored_at": now.Format(time.RFC3339Nano),
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "tenant id")
+	cmd.Flags().StringVar(&base, "base", "", "base state directory")
+	cmd.Flags().StringVar(&sink, "sink", "", "external sink identifier (free-text; e.g. 's3://audit-bucket/themis/anchors/' or 'git@github.com:org/themis-anchors.git')")
+	_ = cmd.MarkFlagRequired("id")
+	_ = cmd.MarkFlagRequired("base")
 	return cmd
 }
 
