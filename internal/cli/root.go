@@ -27,5 +27,6 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newPolicyCmd())
 	root.AddCommand(newDecideCmd())
 	root.AddCommand(newBOMCmd())
+	root.AddCommand(newIngestCmd())
 	return root
 }
