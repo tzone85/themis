@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 6 (REST read API) implemented.** Themis now exposes an HTTP API for querying tenant health, the most recent decision for a PR, and signed BOM artefacts. Per-tenant Bearer-token auth (constant-time compare); OIDC lands later. See the Changelog below. Plan 7 (write endpoints + GitHub Action + MCP server) is next.
+> **Plan 7 (Write API + GitHub Action) implemented.** Themis now exposes a `POST /v1/tenants/{id}/decide` endpoint and ships a composite GitHub Action (`actions/themis-check`) plus a local `pre-push` git hook — both invoke the same `pipeline.Run()` that backs the CLI, so verdicts are identical regardless of surface. See the Changelog below. Plan 8 (MCP server + web dashboard) is next.
 
 ## End-to-end demo
 
@@ -34,6 +34,26 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 7 (Write API + GitHub Action)
+
+**Added**
+
+- `internal/pipeline` — `pipeline.Run(store, tenantID, AIChange, Graph, Policy, bodies, scanners)` extracts the classify→scan→decide orchestration so the CLI (`themis decide`) and the HTTP surface call the same code path and emit the same ledger events in the same order. CLI refactored to delegate to `pipeline.Run`.
+- `internal/api/decide.go` — `POST /v1/tenants/{id}/decide`:
+  - JSON body `{ai_change, policy_yaml, workdir_files (base64 map, optional)}`.
+  - Validates AIChange + parses policy (emits `POLICY_INVALID` on parse failure, then 400).
+  - Returns `{pr_id, actor, impact, findings, decision}` with status 200.
+  - Auth: Bearer (per-tenant `api-tokens`).
+- 9 integration tests covering: happy path, secret-deny via base64 workdir files, missing auth, method-not-allowed, malformed JSON, missing policy, malformed policy (+ POLICY_INVALID ledger emit), invalid base64, invalid AIChange.
+- `actions/themis-check/action.yml` — composite GitHub Action with inputs `themis-base-url`, `themis-token`, `tenant-id`, `pr-id`, `policy-path`, `actor`, `fail-on-require-approval`; outputs `verdict`, `decision-json`. Exits non-zero on `DENY` (and optionally `REQUIRE_APPROVAL`).
+- `scripts/themis-check.sh` — shim used by the GitHub Action; uses only `curl + jq + git` so no extra dependencies on the runner. Computes per-file SHA-256 hashes against `${{ github.event.pull_request.base.sha }}`.
+- `scripts/hooks/pre-push.sh` — local enforcement hook. Lazy-initialises a `local` tenant if missing; runs `themis ingest --adapter git_heuristic` + `themis decide`; fails the push on `DENY`.
+
+**Notes**
+
+- The pre-push hook intentionally falls closed on unknown verdicts so a partial server upgrade can't open a window where developers think they're protected but aren't.
+- The Action's outputs use the GitHub-Actions multi-line `<<__THEMIS_EOF__` syntax so the full JSON envelope survives intact for downstream `if:` expressions.
 
 ### Unreleased — Plan 6 (REST read API)
 
