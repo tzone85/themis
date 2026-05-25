@@ -11,10 +11,9 @@ import (
 
 	"github.com/tzone85/themis/internal/aichange"
 	"github.com/tzone85/themis/internal/catalogue"
-	"github.com/tzone85/themis/internal/classify"
 	"github.com/tzone85/themis/internal/ledger"
+	"github.com/tzone85/themis/internal/pipeline"
 	"github.com/tzone85/themis/internal/policy"
-	"github.com/tzone85/themis/internal/scan"
 )
 
 func newDecideCmd() *cobra.Command {
@@ -88,17 +87,11 @@ func runDecide(cmd *cobra.Command, id, base, changePath, policyPath, cataloguePa
 		return err
 	}
 
-	// Classify.
-	imp := classify.Classify(c, g)
-
-	// Scan.
 	bodies, err := readBodies(workdir, c)
 	if err != nil {
 		return fmt.Errorf("read workdir bodies: %w", err)
 	}
-	findings := scan.RunAll(scan.DefaultScanners(), c, bodies)
 
-	// Open ledger once for the cluster of events we'll emit.
 	events, _ := tenantPaths(base, id)
 	s, err := ledger.OpenStore(events)
 	if err != nil {
@@ -106,52 +99,14 @@ func runDecide(cmd *cobra.Command, id, base, changePath, policyPath, cataloguePa
 	}
 	defer func() { _ = s.Close() }()
 
-	// Emit one SCAN_FINDING per finding (per spec §6.1 "each finding stored
-	// individually so adding/removing scanners doesn't invalidate history").
-	for _, f := range findings {
-		payload, err := json.Marshal(map[string]any{"pr_id": c.PRID, "finding": f})
-		if err != nil {
-			return fmt.Errorf("marshal finding: %w", err)
-		}
-		e := ledger.Event{
-			Kind:      "SCAN_FINDING",
-			Tenant:    id,
-			Timestamp: time.Now().UTC(),
-			Payload:   payload,
-			PrevHash:  s.LastHash(),
-		}
-		if _, err := s.Append(e); err != nil {
-			return fmt.Errorf("append SCAN_FINDING: %w", err)
-		}
-	}
-
-	// Decide.
-	decision := policy.Decide(c, imp, findings, p)
-
-	payload, err := json.Marshal(map[string]any{
-		"pr_id":    c.PRID,
-		"actor":    c.Actor,
-		"impact":   imp,
-		"findings": findings,
-		"decision": decision,
-	})
+	res, err := pipeline.Run(s, id, c, g, p, bodies, nil)
 	if err != nil {
-		return fmt.Errorf("marshal decision payload: %w", err)
-	}
-	e := ledger.Event{
-		Kind:      "DECISION_ISSUED",
-		Tenant:    id,
-		Timestamp: time.Now().UTC(),
-		Payload:   payload,
-		PrevHash:  s.LastHash(),
-	}
-	if _, err := s.Append(e); err != nil {
-		return fmt.Errorf("append DECISION_ISSUED: %w", err)
+		return err
 	}
 
 	enc := json.NewEncoder(cmd.OutOrStdout())
 	enc.SetIndent("", "  ")
-	return enc.Encode(decision)
+	return enc.Encode(res.Decision)
 }
 
 // readBodies pulls AfterHash-side file content from workdir for every
