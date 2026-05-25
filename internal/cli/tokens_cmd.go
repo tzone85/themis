@@ -91,8 +91,8 @@ func newTokensGrantCmd() *cobra.Command {
 			if err := writeTokensFile(base, doc); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "TOKEN (record this now — it will not be shown again):\n%s\n", plain)
-			fmt.Fprintf(cmd.OutOrStdout(), "tenant=%s role=%s description=%q\n", tenant, role, description)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "TOKEN (record this now — it will not be shown again):\n%s\n", plain)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "tenant=%s role=%s description=%q\n", tenant, role, description)
 			return nil
 		},
 	}
@@ -117,16 +117,16 @@ func newTokensListCmd() *cobra.Command {
 				return err
 			}
 			if len(doc.Tokens) == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "(no tokens registered)")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "(no tokens registered)")
 				return nil
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "SUFFIX  TENANT          ROLE        DESCRIPTION")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "SUFFIX  TENANT          ROLE        DESCRIPTION")
 			for _, t := range doc.Tokens {
 				suffix := t.Token
 				if len(suffix) > 4 {
 					suffix = suffix[len(suffix)-4:]
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%-6s  %-14s  %-10s  %s\n", suffix, t.Tenant, t.Role, t.Description)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%-6s  %-14s  %-10s  %s\n", suffix, t.Tenant, t.Role, t.Description)
 			}
 			return nil
 		},
@@ -162,7 +162,7 @@ func newTokensRevokeCmd() *cobra.Command {
 			if err := writeTokensFile(base, doc); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "revoked %d token(s) matching %q\n", removed, prefix)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "revoked %d token(s) matching %q\n", removed, prefix)
 			return nil
 		},
 	}
