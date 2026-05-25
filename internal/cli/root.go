@@ -32,5 +32,6 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newMCPCmd())
 	root.AddCommand(newApprovalCmd())
 	root.AddCommand(newOverrideCmd())
+	root.AddCommand(newHeartbeatCmd())
 	return root
 }
