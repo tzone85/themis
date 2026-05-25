@@ -95,6 +95,8 @@ func (s *server) handleTenantRoute(w http.ResponseWriter, r *http.Request) {
 		s.handleTenantHealth(w, r, id)
 	case "decisions":
 		s.handleDecisions(w, r, id)
+	case "decide":
+		s.handleDecide(w, r, id)
 	case "boms":
 		if len(parts) < 3 || parts[2] == "" {
 			writeError(w, http.StatusNotFound, "missing bom hash")
