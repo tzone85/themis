@@ -104,6 +104,12 @@ func (s *server) handleTenantRoute(w http.ResponseWriter, r *http.Request) {
 		s.handleEvents(w, r, id)
 	case "approvals":
 		s.handleApprovals(w, r, id)
+	case "overrides":
+		sub := ""
+		if len(parts) >= 3 {
+			sub = parts[2]
+		}
+		s.handleOverrides(w, r, id, sub)
 	case "boms":
 		if len(parts) < 3 || parts[2] == "" {
 			writeError(w, http.StatusNotFound, "missing bom hash")
