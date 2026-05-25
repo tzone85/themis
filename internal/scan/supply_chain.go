@@ -108,13 +108,12 @@ type pkgRef struct {
 // parseManifest returns (ecosystem, [{name,line}…]) for a supported manifest.
 // Empty ecosystem means "not a manifest we recognise".
 func parseManifest(path string, body []byte) (string, []pkgRef) {
-	base := strings.ToLower(filepath.Base(path))
-	switch {
-	case base == "package.json":
+	switch strings.ToLower(filepath.Base(path)) {
+	case "package.json":
 		return "npm", parsePackageJSON(body)
-	case base == "requirements.txt":
+	case "requirements.txt":
 		return "pypi", parseRequirementsTxt(body)
-	case base == "go.mod":
+	case "go.mod":
 		return "go", parseGoMod(body)
 	}
 	return "", nil
