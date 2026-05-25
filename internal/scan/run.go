@@ -47,5 +47,6 @@ func DefaultScanners() []Scanner {
 	return []Scanner{
 		NewSecretsScanner(),
 		NewPIIScanner(),
+		NewSupplyChainScanner(),
 	}
 }

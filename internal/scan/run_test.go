@@ -57,12 +57,12 @@ func TestRunAll_CapturesScannerCrash(t *testing.T) {
 	}
 }
 
-func TestDefaultScanners_HasSecretsAndPII(t *testing.T) {
+func TestDefaultScanners_HasSecretsPIIAndSupplyChain(t *testing.T) {
 	names := map[string]bool{}
 	for _, s := range DefaultScanners() {
 		names[s.Name()] = true
 	}
-	for _, want := range []string{"secrets", "pii"} {
+	for _, want := range []string{"secrets", "pii", "supply_chain"} {
 		if !names[want] {
 			t.Errorf("DefaultScanners missing %q", want)
 		}
