@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 7 (Write API + GitHub Action) implemented.** Themis now exposes a `POST /v1/tenants/{id}/decide` endpoint and ships a composite GitHub Action (`actions/themis-check`) plus a local `pre-push` git hook — both invoke the same `pipeline.Run()` that backs the CLI, so verdicts are identical regardless of surface. See the Changelog below. Plan 8 (MCP server + web dashboard) is next.
+> **Plan 8 (MCP server + embedded dashboard) implemented.** Themis now ships a vanilla-JS audit dashboard served at `/` from the same Go binary, a paginated `GET /v1/tenants/{id}/events` timeline endpoint, and a stdio MCP server (`themis mcp`) that bridges Claude Code / Cursor / VXD agent loops to the existing REST surface — the "agentic-first surface" pillar of the design spec is now live. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,25 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 8 (MCP server + embedded dashboard)
+
+**Added**
+
+- `GET /v1/tenants/{id}/events` — paginated, newest-first ledger feed. Query params: `limit` (1-500, default 50), `offset`, `kind`. Returns `{events, total, returned}`.
+- Embedded SPA dashboard served at `GET /` from the binary via `embed.FS`. No build step; vanilla JS + CSS. Reads `?token=` + `?tenant=` from the URL, calls the existing REST endpoints, renders the audit timeline + a JSON detail pane. Kind-filter dropdown maps to the events endpoint.
+- `internal/mcp` — stdio JSON-RPC bridge implementing the [Model Context Protocol](https://modelcontextprotocol.io/) v2024-11-05 handshake plus four read-only tools:
+  - `themis_health` — ledger health for the configured tenant.
+  - `themis_decisions(pr_id)` — most recent DECISION_ISSUED for a PR.
+  - `themis_bom(hash)` — canonical signed BOM body (64-hex hash validated).
+  - `themis_events(kind?, limit?)` — newest-first timeline.
+  All tools route through the existing REST surface so tenant isolation + auth + audit logging stay centralised. 12 unit tests cover handshake, list, every tool, every error path (unknown method/tool, bad version, parse error, notification semantics).
+- `themis mcp --base-url <url> --tenant-id <id> --token <t>` — runs the MCP bridge over stdio, handles SIGINT/SIGTERM for clean shutdown.
+
+**Notes**
+
+- The dashboard is intentionally minimal: it surfaces the audit story (timeline + verdict + JSON) so compliance officers can see at a glance what landed. A richer policy editor / BOM viewer lands later.
+- The MCP server is the agentic-first surface called out in the design spec (§5.1). It's read-only at Plan 8 — agents can ask "would this PR pass?" via the existing decision history; a `themis_decide` MCP tool is intentionally not exposed because policy must remain deterministic, not agent-driven.
 
 ### Unreleased — Plan 7 (Write API + GitHub Action)
 
