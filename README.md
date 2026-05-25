@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 5 (Ingest Adapters) implemented.** The pipeline now starts from real-world inputs — a git diff, a Claude Code session transcript, or an operator's manual attestation — and runs end-to-end to a signed AI-BOM. See the Changelog below. Plan 6 (REST API + MCP server + web dashboard) is next.
+> **Plan 6 (REST read API) implemented.** Themis now exposes an HTTP API for querying tenant health, the most recent decision for a PR, and signed BOM artefacts. Per-tenant Bearer-token auth (constant-time compare); OIDC lands later. See the Changelog below. Plan 7 (write endpoints + GitHub Action + MCP server) is next.
 
 ## End-to-end demo
 
@@ -34,6 +34,26 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 6 (REST read API)
+
+**Added**
+
+- `internal/api`:
+  - `Tokens(base, id)` — reads `tenants/<id>/api-tokens` (one per line; `#` comments and blanks ignored). Missing file ⇒ deny-all.
+  - `RequireToken(base, id, r)` — Bearer-only, constant-time compare to thwart timing-based token guessing.
+  - `NewMux(base)` returns a `*http.ServeMux` exposing:
+    - `GET /v1/health` — unauthenticated; returns version + `tenants_count`.
+    - `GET /v1/tenants/{id}/health` — `ledger.Doctor()` report as JSON.
+    - `GET /v1/tenants/{id}/decisions?pr_id=…` — most recent `DECISION_ISSUED` payload for the PR (404 if none).
+    - `GET /v1/tenants/{id}/boms/{hash}` and `…/{hash}.sig` — serve the canonical BOM + ed25519 signature sidecar. The hash is validated to be exactly 64 lowercase hex characters so path traversal is structurally impossible.
+- `themis serve --base <state> [--addr :8787]` — listens on `addr`, installs SIGINT/SIGTERM handlers for clean shutdown.
+- Integration tests cover every endpoint × every status code (200/400/401/404/405) including the path-traversal guard.
+
+**Notes**
+
+- The API is intentionally read-only at Plan 6. The write surface (POST /v1/decide) lands in Plan 7 along with the GitHub Action wrapper.
+- The Authorization scheme is `Bearer <token>`; tokens are full opaque strings (no JWT) so the auth path stays trivial to audit.
 
 ### Unreleased — Plan 5 (Ingest Adapters)
 
