@@ -110,6 +110,12 @@ func (s *server) handleTenantRoute(w http.ResponseWriter, r *http.Request) {
 			sub = parts[2]
 		}
 		s.handleOverrides(w, r, id, sub)
+	case "heartbeat":
+		s.handleHeartbeat(w, r, id)
+	case "anchor":
+		s.handleAnchor(w, r, id)
+	case "incidents":
+		s.handleIncidents(w, r, id)
 	case "boms":
 		if len(parts) < 3 || parts[2] == "" {
 			writeError(w, http.StatusNotFound, "missing bom hash")
