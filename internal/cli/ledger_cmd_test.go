@@ -93,6 +93,28 @@ func TestLedgerVerify_DetectsTampering(t *testing.T) {
 	if !strings.Contains(err.Error(), "chain") && !strings.Contains(err.Error(), "decode") {
 		t.Fatalf("verify error should mention chain or decode: %v", err)
 	}
+
+	// And the sidecar incidents file must now record the integrity failure.
+	incidentsPath := filepath.Join(base, "tenants", id, "incidents.jsonl")
+	body, err := os.ReadFile(incidentsPath)
+	if err != nil {
+		t.Fatalf("incidents.jsonl missing after tamper: %v", err)
+	}
+	if !strings.Contains(string(body), "LEDGER_INTEGRITY_BROKEN") {
+		t.Fatalf("incidents.jsonl missing LEDGER_INTEGRITY_BROKEN: %s", body)
+	}
+}
+
+func TestLedgerVerify_OnUntamperedDoesNotEmitIncident(t *testing.T) {
+	base, id := setupTenant(t)
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{"ledger", "verify", "--id", id, "--base", base})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("verify clean: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(base, "tenants", id, "incidents.jsonl")); !os.IsNotExist(err) {
+		t.Fatal("incidents.jsonl should NOT be created on clean verify")
+	}
 }
 
 func TestLedgerReplay_RebuildsProjection(t *testing.T) {

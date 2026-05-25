@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/tzone85/themis/internal/incidents"
 	"github.com/tzone85/themis/internal/ledger"
 )
 
@@ -54,11 +56,24 @@ func newLedgerVerifyCmd() *cobra.Command {
 	var id, base string
 	cmd := &cobra.Command{
 		Use:   "verify",
-		Short: "Walk the Merkle chain; non-zero exit if tampering detected",
+		Short: "Walk the Merkle chain; non-zero exit + LEDGER_INTEGRITY_BROKEN incident if tampering detected",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			events, _ := tenantPaths(base, id)
-			if err := ledger.Verify(events); err != nil {
-				return err
+			verifyErr := ledger.Verify(events)
+			if verifyErr != nil {
+				// Record the integrity failure to the sidecar incidents file
+				// before surfacing the error — the main ledger can no longer
+				// be trusted to record its own failure (design spec §9.1.3).
+				payload, _ := json.Marshal(map[string]string{
+					"detected_at":  time.Now().UTC().Format(time.RFC3339Nano),
+					"chain_error":  verifyErr.Error(),
+					"tenant":       id,
+					"source":       "themis ledger verify",
+				})
+				if logErr := incidents.Append(base, id, "LEDGER_INTEGRITY_BROKEN", payload); logErr != nil {
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to record LEDGER_INTEGRITY_BROKEN: %v\n", logErr)
+				}
+				return verifyErr
 			}
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "ledger: chain intact")
 			return nil
