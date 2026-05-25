@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Themis — audit dashboard</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 0; background: #f7f7f9; color: #222; }
+  header { background: #1c2b4a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+  header .status { margin-left: auto; font-size: 12px; opacity: 0.7; }
+  main { max-width: 1100px; margin: 16px auto; padding: 0 16px; display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+  .panel { background: #fff; border: 1px solid #e2e3e8; border-radius: 6px; padding: 14px; }
+  .panel h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .row input, .row select { padding: 6px 8px; border: 1px solid #ccd; border-radius: 4px; font-size: 13px; }
+  .row input { flex: 1; }
+  .ev { padding: 8px 10px; border: 1px solid #e9eaef; border-radius: 4px; margin-bottom: 6px; cursor: pointer; }
+  .ev:hover { background: #f0f3fa; }
+  .ev .kind { font-weight: 600; font-size: 12px; }
+  .kind-DECISION_ISSUED { color: #0a6b2e; }
+  .kind-BOM_SIGNED      { color: #0a4b6b; }
+  .kind-SCAN_FINDING    { color: #b35400; }
+  .kind-POLICY_INVALID  { color: #a00; }
+  .ev .ts { font-size: 11px; color: #777; }
+  pre { background: #0b1020; color: #d6e0f5; padding: 12px; border-radius: 4px; overflow: auto; font-size: 12px; line-height: 1.45; }
+  .verdict { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+  .verdict-ALLOW { background: #e0f8e7; color: #0a6b2e; }
+  .verdict-REQUIRE_APPROVAL { background: #fff3d6; color: #8a5400; }
+  .verdict-DENY  { background: #fde0e0; color: #a40000; }
+  .muted { color: #888; font-size: 12px; }
+  .err { color: #a40000; font-size: 12px; padding: 6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>THEMIS — audit dashboard</h1>
+  <div class="status" id="health-pill">connecting…</div>
+</header>
+<main>
+  <section class="panel">
+    <h2>Timeline</h2>
+    <div class="row">
+      <select id="kind-filter">
+        <option value="">all kinds</option>
+        <option>TENANT_INITIALISED</option>
+        <option>CATALOGUE_SYNCED</option>
+        <option>INGEST_COMPLETED</option>
+        <option>IMPACT_CLASSIFIED</option>
+        <option>SCAN_FINDING</option>
+        <option>DECISION_ISSUED</option>
+        <option>BOM_BUILT</option>
+        <option>BOM_SIGNED</option>
+        <option>POLICY_INVALID</option>
+      </select>
+    </div>
+    <div id="events"></div>
+  </section>
+  <section class="panel">
+    <h2>Event detail</h2>
+    <div id="detail" class="muted">Pick an event from the timeline.</div>
+  </section>
+</main>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var token = params.get('token') || '';
+  var tenant = params.get('tenant') || 'acme';
+
+  function api(path) {
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(path, { headers: headers }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'onclick') n.onclick = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (k) {
+      if (k == null) return;
+      n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
+    });
+    return n;
+  }
+
+  function loadHealth() {
+    api('/v1/health').then(function (h) {
+      var pill = document.getElementById('health-pill');
+      pill.textContent = 'themis ' + h.version + ' · ' + h.tenants_count + ' tenant(s)';
+    }).catch(function (e) {
+      document.getElementById('health-pill').textContent = 'health failed: ' + e.message;
+    });
+  }
+
+  function renderEvents(events) {
+    var list = document.getElementById('events');
+    list.innerHTML = '';
+    if (!events.length) {
+      list.appendChild(el('div', { class: 'muted' }, ['(no events)']));
+      return;
+    }
+    events.forEach(function (ev) {
+      var node = el('div', { class: 'ev', onclick: function () { showDetail(ev); } }, [
+        el('div', { class: 'kind kind-' + ev.kind }, [ev.kind]),
+        el('div', { class: 'ts' }, [ev.ts])
+      ]);
+      list.appendChild(node);
+    });
+  }
+
+  function showDetail(ev) {
+    var detail = document.getElementById('detail');
+    detail.innerHTML = '';
+
+    var payload = ev.payload || {};
+    var verdict = payload.decision && payload.decision.verdict;
+    var pieces = [];
+
+    if (verdict) {
+      pieces.push(el('div', null, [
+        el('span', { class: 'verdict verdict-' + verdict }, [verdict]),
+        el('span', { class: 'muted' }, [' · ' + (payload.pr_id || '')])
+      ]));
+    }
+    pieces.push(el('div', { class: 'muted' }, [ev.kind + ' @ ' + ev.ts]));
+    pieces.push(el('pre', null, [JSON.stringify(payload, null, 2)]));
+    pieces.forEach(function (p) { detail.appendChild(p); });
+  }
+
+  function loadEvents() {
+    var kind = document.getElementById('kind-filter').value;
+    var qs = '?limit=100' + (kind ? '&kind=' + encodeURIComponent(kind) : '');
+    api('/v1/tenants/' + encodeURIComponent(tenant) + '/events' + qs)
+      .then(function (r) { renderEvents(r.events || []); })
+      .catch(function (e) {
+        document.getElementById('events').innerHTML = '';
+        document.getElementById('events').appendChild(el('div', { class: 'err' }, ['load failed: ' + e.message]));
+      });
+  }
+
+  document.getElementById('kind-filter').addEventListener('change', loadEvents);
+  loadHealth();
+  loadEvents();
+})();
+</script>
+</body>
+</html>

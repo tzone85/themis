@@ -28,6 +28,9 @@ func NewMux(base string) *http.ServeMux {
 	// on Go 1.22's tree router so behaviour is identical across Go versions
 	// the project supports.
 	mux.HandleFunc("/v1/tenants/", srv.handleTenantRoute)
+
+	// Embedded dashboard at /.
+	mux.HandleFunc("/", srv.handleDashboard)
 	return mux
 }
 
