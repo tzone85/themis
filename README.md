@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plans 16 + 17 (Mempalace bridge + Advisory agent) implemented.** A content-addressed Mempalace wing writer lives at `internal/mempalace`; the advisory agent (`internal/advisor`) drafts a plain-language review note from any DECISION_ISSUED and persists it as a drawer file. `themis advise --id <t> --pr-id <p>` ties them together. Real LLM providers and the upstream Mempalace daemon plug in behind the same interfaces. See the Changelog below.
+> **Plan 18 (OIDC TokenStore + ChainStore) implemented.** The Plan-12 `TokenStore` interface now has an OIDC implementation that validates Bearer tokens by calling an IdP's `/userinfo` endpoint, with per-token caching (configurable TTL) and a pluggable `ClaimMapper` so any IdP claim scheme can drive the `(tenant, role)` mapping. A `ChainStore` composes multiple stores in order (e.g. file YAML first, OIDC fallback) and short-circuits on hard errors rather than silently falling back to a weaker ACL. **The entire deferred-items list from Plan 11 is now done.** See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,21 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 18 (OIDC TokenStore + ChainStore)
+
+**Added**
+
+- `internal/auth/oidc.go`:
+  - `OIDCTokenStore` — validates Bearer tokens against an IdP's `/userinfo` endpoint. Configurable `HTTPClient` (so tests substitute httptest), `CacheTTL` (LRU-free in-memory cache so a busy ramp doesn't hammer the IdP), and `ClaimMapper` (so any IdP claim scheme can drive `(tenant, role)`).
+  - `DefaultClaimMapper` reads `tenant` + `role` + `description` claims directly; production deployments override it (e.g. derive tenant from a group membership claim).
+  - `ChainStore` composes multiple TokenStores. First successful lookup wins; `ErrUnauthorized` from one store falls through to the next; any *other* error short-circuits so an IdP outage can't silently weaken access control by falling through to a stale local file store.
+  - 12 unit tests cover the IdP happy path, 401/5xx mapping, missing-URL guard, default + custom claim mappers, cache hits + TTL expiry, chain precedence + fall-through + short-circuit semantics + empty-chain default.
+
+**Notes**
+
+- The same `TokenStore` interface that backed Plan 12 now powers OIDC; no caller changes. Production deployments wire `ChainStore(FileTokenStore, OIDCTokenStore)` so existing operator workflows keep working while IdP-issued tokens take precedence.
+- Cache invalidation on logout is intentionally out-of-scope at Plan 18 — short `CacheTTL` (≤ 60s) is the operational guidance; a future plan can add an introspection-endpoint-driven revocation hook.
 
 ### Unreleased — Plans 16 + 17 (Mempalace bridge + Advisory agent)
 
