@@ -80,6 +80,9 @@ func DefaultRegistry() *Registry {
 	r.Register("BOM_SIGNED", noopProject)
 	r.Register("INGEST_COMPLETED", noopProject)
 	r.Register("INGEST_ADAPTER_FAILED", noopProject)
+	r.Register("APPROVAL_GRANTED", noopProject)
+	r.Register("APPROVAL_DENIED", noopProject)
+	r.Register("DECISION_FINALISED", noopProject)
 	return r
 }
 

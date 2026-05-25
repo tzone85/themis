@@ -26,8 +26,11 @@ func TestWiring_DefaultRegistryHasMinimumKinds(t *testing.T) {
 		"POLICY_INVALID",    // Plan 3
 		"BOM_BUILT",            // Plan 4
 		"BOM_SIGNED",           // Plan 4
-		"INGEST_COMPLETED",     // Plan 5
+		"INGEST_COMPLETED",      // Plan 5
 		"INGEST_ADAPTER_FAILED", // Plan 5
+		"APPROVAL_GRANTED",      // Plan 9
+		"APPROVAL_DENIED",       // Plan 9
+		"DECISION_FINALISED",    // Plan 9
 	}
 	for _, kind := range want {
 		if _, ok := r.Projector(kind); !ok {
