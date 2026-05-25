@@ -28,9 +28,12 @@ func TestWiring_DefaultRegistryHasMinimumKinds(t *testing.T) {
 		"BOM_SIGNED",           // Plan 4
 		"INGEST_COMPLETED",      // Plan 5
 		"INGEST_ADAPTER_FAILED", // Plan 5
-		"APPROVAL_GRANTED",      // Plan 9
-		"APPROVAL_DENIED",       // Plan 9
-		"DECISION_FINALISED",    // Plan 9
+		"APPROVAL_GRANTED",           // Plan 9
+		"APPROVAL_DENIED",            // Plan 9
+		"DECISION_FINALISED",         // Plan 9
+		"EMERGENCY_OVERRIDE_INVOKED", // Plan 10
+		"OVERRIDE_POSTMORTEM_DUE",    // Plan 10
+		"OVERRIDE_POSTMORTEM_CLOSED", // Plan 10
 	}
 	for _, kind := range want {
 		if _, ok := r.Projector(kind); !ok {

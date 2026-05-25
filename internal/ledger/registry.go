@@ -83,6 +83,9 @@ func DefaultRegistry() *Registry {
 	r.Register("APPROVAL_GRANTED", noopProject)
 	r.Register("APPROVAL_DENIED", noopProject)
 	r.Register("DECISION_FINALISED", noopProject)
+	r.Register("EMERGENCY_OVERRIDE_INVOKED", noopProject)
+	r.Register("OVERRIDE_POSTMORTEM_DUE", noopProject)
+	r.Register("OVERRIDE_POSTMORTEM_CLOSED", noopProject)
 	return r
 }
 
