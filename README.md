@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 12 (Multi-tenant auth + role model) implemented.** Bearer tokens now resolve to a `(tenant, role)` Identity. Five roles totally ordered: `read < dev < reviewer < compliance < admin`. Endpoint gates enforce minimum role (e.g. POST `/approvals` requires `reviewer`; POST `/anchor` requires `admin`). Legacy `tenants/<id>/api-tokens` files keep working — entries there are treated as `admin` for the tenant. New `themis tokens grant/list/revoke` CLI for managing the structured `tenants/tokens.yaml` store. See the Changelog below.
+> **Plan 13 (Supply-chain scanners) implemented.** Two new scanners now ship in `scan.DefaultScanners()`: a slopsquat detector (small-edit-distance to popular packages) and a hallucinated-imports detector (unknown to the bundled package oracle). Both inspect `package.json`, `requirements.txt`, and `go.mod` files via the existing `workdir_files` plumbing. The bundled `StaticOracle` ships an offline allowlist per ecosystem; production deployments swap in a `PackageOracle` impl backed by their preferred feed. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,25 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 13 (Supply-chain scanners)
+
+**Added**
+
+- `internal/scan/oracle.go` — `PackageOracle` interface (`Knows`, `Popular`, `DistanceToPopular`) + bundled `StaticOracle` with curated popular lists for npm, pypi, and Go modules.
+- `internal/scan/supply_chain.go` — `SupplyChainScanner` that:
+  - Parses `package.json` (deps + devDeps), `requirements.txt` (pip-style), and `go.mod` (require blocks).
+  - Emits `hallucinated_import` findings (severity `critical`) when a package name is unknown to the oracle.
+  - Emits `slopsquat` findings (severity `high`) when a non-popular name is within `SlopsquatThreshold = 3` Levenshtein edits of a popular package.
+  - Skips deleted files, popular-exact matches, and unrecognised manifest types.
+- Inline Levenshtein implementation so the `scan` package has no external dep for the supply-chain logic.
+- `SupplyChainScanner` wired into `DefaultScanners()` alongside secrets + PII.
+- 19 tests: oracle ordering + ecosystems + AddKnown isolation, Levenshtein known pairs, every detection path × every ecosystem, broken-manifest tolerance, deleted-file skip.
+
+**Notes**
+
+- The bundled `StaticOracle` lists are intentionally small (~20 popular packages per ecosystem). They give a useful default for offline + air-gapped deployments; richer feeds plug in by replacing the `.Oracle` field on `SupplyChainScanner`.
+- Slopsquat distance compares against the full identifier — for Go modules that means the full import path (`github.com/spf13/cobra`) — so typo-squats of *module paths*, not just leaf names, are caught.
 
 ### Unreleased — Plan 12 (Multi-tenant auth + role model)
 
