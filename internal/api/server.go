@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tzone85/themis/internal/auth"
 	"github.com/tzone85/themis/internal/ledger"
 )
 
@@ -36,6 +37,37 @@ func NewMux(base string) *http.ServeMux {
 
 type server struct {
 	base string
+}
+
+// actionMinRole maps a tenant-scoped endpoint + method to the minimum role
+// required. Reads ("read") and dev-tier writes ("dev") stay light; approvals
+// require "reviewer"; overrides and post-mortem closure require "compliance";
+// ledger anchoring + heartbeat reporting require "admin".
+//
+// Returns the empty Role when the action is unknown — the dispatch switch
+// will surface a 404 in that case, so we don't need to make the gate stricter.
+func actionMinRole(action, method string) auth.Role {
+	switch action {
+	case "health", "decisions", "events", "incidents":
+		return auth.RoleRead
+	case "boms":
+		return auth.RoleRead
+	case "decide":
+		return auth.RoleDev
+	case "approvals":
+		if method == http.MethodGet {
+			return auth.RoleRead
+		}
+		return auth.RoleReviewer
+	case "overrides":
+		if method == http.MethodGet {
+			return auth.RoleRead
+		}
+		return auth.RoleCompliance
+	case "anchor", "heartbeat":
+		return auth.RoleAdmin
+	}
+	return ""
 }
 
 // writeJSON serialises body as JSON with status code.
@@ -88,8 +120,15 @@ func (s *server) handleTenantRoute(w http.ResponseWriter, r *http.Request) {
 	}
 	id, action := parts[0], parts[1]
 
-	if err := RequireToken(s.base, id, r); err != nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+	// Role required per action. Empty string = "any valid token".
+	minRole := actionMinRole(action, r.Method)
+	if _, err := RequireIdentity(s.base, id, minRole, r); err != nil {
+		switch {
+		case errors.Is(err, auth.ErrInsufficientRole):
+			writeError(w, http.StatusForbidden, "insufficient role")
+		default:
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+		}
 		return
 	}
 

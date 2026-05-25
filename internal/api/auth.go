@@ -1,24 +1,26 @@
 // Package api implements the read-only HTTP surface Themis exposes.
-// Authenticated endpoints use a simple per-tenant Bearer token model;
-// OIDC/SAML lands in a later plan (design spec §6.1).
+// Authentication uses Bearer tokens resolved via the auth package.
+// Plan 12 wires role-aware identity; Plan 17/18 will swap in OIDC behind
+// the same auth.TokenStore interface.
 package api
 
 import (
 	"bufio"
-	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tzone85/themis/internal/auth"
 )
 
-// ErrUnauthorized is returned by RequireToken when no valid token is presented.
-var ErrUnauthorized = errors.New("api: unauthorized")
+// ErrUnauthorized mirrors auth.ErrUnauthorized at the api layer so existing
+// tests keep compiling against the api package.
+var ErrUnauthorized = auth.ErrUnauthorized
 
 // Tokens reads the per-tenant token file at tenants/<id>/api-tokens.
-// One token per non-blank, non-comment line. Lines beginning with '#' are
-// ignored. Returns an empty slice (and no error) when the file is missing —
-// which the auth middleware treats as "no tokens registered, deny all".
+// Retained for back-compat tests + the legacy code path. New endpoints
+// should use RequireIdentity.
 func Tokens(base, id string) ([]string, error) {
 	path := filepath.Join(base, "tenants", id, "api-tokens")
 	f, err := os.Open(path) // #nosec G304 -- path constructed from tenant id, not direct user input.
@@ -47,39 +49,50 @@ func Tokens(base, id string) ([]string, error) {
 
 // RequireToken verifies the Authorization header on r against the tenant's
 // allowlist. Returns ErrUnauthorized for any missing/malformed/unknown token.
+//
+// Plan 12: this is now a thin wrapper around RequireIdentity that ignores
+// the role component, so existing handlers keep working while new handlers
+// opt-in to role checks via RequireIdentity.
 func RequireToken(base, id string, r *http.Request) error {
-	auth := r.Header.Get("Authorization")
-	const prefix = "Bearer "
-	if !strings.HasPrefix(auth, prefix) {
-		return ErrUnauthorized
-	}
-	presented := strings.TrimSpace(auth[len(prefix):])
+	_, err := RequireIdentity(base, id, "", r)
+	return err
+}
+
+// RequireIdentity resolves the Bearer token from r against the auth
+// TokenStore. It returns ErrUnauthorized if the token is unknown or
+// belongs to a different tenant; ErrInsufficientRole if the resolved
+// identity's role does not satisfy minRole.
+//
+// minRole=="" disables the role gate (anyone with a valid token for the
+// tenant passes — equivalent to RequireToken).
+func RequireIdentity(base, tenantID string, minRole auth.Role, r *http.Request) (auth.Identity, error) {
+	presented := bearerToken(r)
 	if presented == "" {
-		return ErrUnauthorized
+		return auth.Identity{}, auth.ErrUnauthorized
 	}
 
-	allowed, err := Tokens(base, id)
+	store := auth.NewFileTokenStore(base)
+	id, err := store.Lookup(presented)
 	if err != nil {
-		return err
+		return auth.Identity{}, err
 	}
-	for _, tok := range allowed {
-		// Constant-time comparison protects against timing-based token guessing.
-		if constantTimeEqual(tok, presented) {
-			return nil
-		}
+	if id.Tenant != tenantID {
+		return auth.Identity{}, auth.ErrUnauthorized
 	}
-	return ErrUnauthorized
+	if !id.Role.Satisfies(minRole) {
+		return auth.Identity{}, auth.ErrInsufficientRole
+	}
+	return id, nil
 }
 
-// constantTimeEqual returns true iff a and b are equal, in time that does
-// not depend on the position of the first differing byte.
-func constantTimeEqual(a, b string) bool {
-	if len(a) != len(b) {
-		return false
+// bearerToken extracts the token from a `Bearer <tok>` Authorization
+// header. Empty when no header or unsupported scheme.
+func bearerToken(r *http.Request) string {
+	v := r.Header.Get("Authorization")
+	const prefix = "Bearer "
+	if !strings.HasPrefix(v, prefix) {
+		return ""
 	}
-	var diff byte
-	for i := range len(a) {
-		diff |= a[i] ^ b[i]
-	}
-	return diff == 0
+	return strings.TrimSpace(v[len(prefix):])
 }
+
