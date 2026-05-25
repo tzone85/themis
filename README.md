@@ -6,7 +6,7 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plan 14 (Pluggable Signer + Sigstore-keyless stub) implemented.** BOM signing now goes through a `sign.Signer` interface; the Plan-4 ed25519 path is now `local-ed25519`, and a `cosign-keyless-stub` mode runs offline with the *shape* of Sigstore keyless (ephemeral key, stub Fulcio cert, synthesised Rekor URL) so the real Fulcio/Rekor adapter can drop in without changing callers. `themis bom sign --signer cosign-keyless-stub --oidc-subject alice@example.com` works end-to-end today. See the Changelog below.
+> **Plan 15 (Heartbeat polling daemon) implemented.** `themis heartbeat run-once` / `themis heartbeat watch` actively probe each tenant repo via a `Checker` abstraction (`stub` implementation in-box; GitHub/GitLab adapters drop in unchanged) and emit `ENFORCEMENT_MISSING` for any target where the required check is no longer installed. Per-tenant target list lives in `tenants/<id>/heartbeat.yaml`. The Watch loop terminates cleanly on SIGINT/SIGTERM. See the Changelog below.
 
 ## End-to-end demo
 
@@ -34,6 +34,23 @@ rules:
 ```
 
 ## Changelog
+
+### Unreleased — Plan 15 (Heartbeat polling daemon)
+
+**Added**
+
+- `internal/heartbeat`:
+  - `Checker` interface (`Name`, `Check`) — pluggable observer. `StubChecker` ships in-box; GitHub/GitLab adapters drop in unchanged.
+  - `Config { Targets []Target }` loaded from `tenants/<id>/heartbeat.yaml`.
+  - `RunOnce(ctx, base, tenant, checker)` — one polling pass; emits `ENFORCEMENT_MISSING` for each target reported missing (and treats checker errors as misses — silence equals problem). Returns the miss count.
+  - `Watch(ctx, base, tenant, checker, interval, logFn)` — long-running loop, terminates cleanly on `ctx.Done()`.
+  - 10 unit tests cover stub allow/reject defaulting, RunOnce miss emission, checker errors counted as miss, context cancellation propagation, Watch clean shutdown.
+- `themis heartbeat run-once` / `themis heartbeat watch [--interval <sec>] [--checker stub] [--stub-allow REPO ...] [--stub-reject REPO ...]` CLI commands.
+
+**Notes**
+
+- The stub checker treats unknown repos as missing, which is the same "fail-closed" posture the rest of the trust layer uses — silence on the watchdog is itself a finding.
+- The Plan-11 `themis heartbeat report` command remains for external observers that don't run the daemon; both paths emit `ENFORCEMENT_MISSING` with the same payload shape so downstream consumers don't care which produced it.
 
 ### Unreleased — Plan 14 (Pluggable Signer + Sigstore-keyless stub)
 

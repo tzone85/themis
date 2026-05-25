@@ -3,7 +3,9 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/tzone85/themis/internal/ledger"
@@ -54,6 +56,33 @@ func TestHeartbeatReport_RequiresMandatoryFields(t *testing.T) {
 	})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("missing --reported-by should error")
+	}
+}
+
+func TestHeartbeatRunOnce_EmitsMisses(t *testing.T) {
+	base, id := setupTenant(t)
+	yaml := "targets:\n" +
+		"  - repo: gh:org/missing-1\n" +
+		"    expected_check: themis-check\n" +
+		"  - repo: gh:org/present\n" +
+		"    expected_check: themis-check\n"
+	if err := os.WriteFile(filepath.Join(base, "tenants", id, "heartbeat.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := &bytes.Buffer{}
+	cmd := NewRootCmd()
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{
+		"heartbeat", "run-once",
+		"--id", id, "--base", base,
+		"--stub-allow", "gh:org/present",
+	})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("run-once: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "1 miss(es) recorded") {
+		t.Fatalf("expected '1 miss(es) recorded', got %q", out.String())
 	}
 }
 

@@ -3,17 +3,93 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/tzone85/themis/internal/heartbeat"
 	"github.com/tzone85/themis/internal/ledger"
 )
 
 func newHeartbeatCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "heartbeat", Short: "Record ENFORCEMENT_MISSING signals from external monitoring"}
-	cmd.AddCommand(newHeartbeatReportCmd())
+	cmd.AddCommand(newHeartbeatReportCmd(), newHeartbeatRunOnceCmd(), newHeartbeatWatchCmd())
 	return cmd
+}
+
+func newHeartbeatRunOnceCmd() *cobra.Command {
+	var id, base, checkerName string
+	var stubAllow, stubReject []string
+	cmd := &cobra.Command{
+		Use:   "run-once",
+		Short: "Run one polling pass over tenants/<id>/heartbeat.yaml and emit ENFORCEMENT_MISSING for any miss",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			checker, err := resolveChecker(checkerName, stubAllow, stubReject)
+			if err != nil {
+				return err
+			}
+			misses, err := heartbeat.RunOnce(cmd.Context(), base, id, checker)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "heartbeat: %d miss(es) recorded\n", misses)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "tenant id")
+	cmd.Flags().StringVar(&base, "base", "", "base state directory")
+	cmd.Flags().StringVar(&checkerName, "checker", "stub", "checker implementation (stub)")
+	cmd.Flags().StringArrayVar(&stubAllow, "stub-allow", nil, "(stub) repos to report as present")
+	cmd.Flags().StringArrayVar(&stubReject, "stub-reject", nil, "(stub) repos to report as missing")
+	for _, n := range []string{"id", "base"} {
+		_ = cmd.MarkFlagRequired(n)
+	}
+	return cmd
+}
+
+func newHeartbeatWatchCmd() *cobra.Command {
+	var id, base, checkerName string
+	var stubAllow, stubReject []string
+	var intervalSec int
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Run the heartbeat polling loop until SIGINT/SIGTERM",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			checker, err := resolveChecker(checkerName, stubAllow, stubReject)
+			if err != nil {
+				return err
+			}
+			ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+			interval := time.Duration(intervalSec) * time.Second
+			if interval <= 0 {
+				interval = 60 * time.Second
+			}
+			return heartbeat.Watch(ctx, base, id, checker, interval, func(s string) {
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), s)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "id", "", "tenant id")
+	cmd.Flags().StringVar(&base, "base", "", "base state directory")
+	cmd.Flags().StringVar(&checkerName, "checker", "stub", "checker implementation (stub)")
+	cmd.Flags().StringArrayVar(&stubAllow, "stub-allow", nil, "(stub) repos to report as present")
+	cmd.Flags().StringArrayVar(&stubReject, "stub-reject", nil, "(stub) repos to report as missing")
+	cmd.Flags().IntVar(&intervalSec, "interval", 60, "seconds between polling passes")
+	for _, n := range []string{"id", "base"} {
+		_ = cmd.MarkFlagRequired(n)
+	}
+	return cmd
+}
+
+func resolveChecker(name string, allow, reject []string) (heartbeat.Checker, error) {
+	switch name {
+	case "", "stub":
+		return heartbeat.NewStubChecker(allow, reject), nil
+	}
+	return nil, fmt.Errorf("unknown checker %q", name)
 }
 
 // newHeartbeatReportCmd is the dataplane endpoint design spec §9.1.2 expects:
