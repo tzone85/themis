@@ -20,12 +20,16 @@ import (
 
 // Result is the structured output of Run, suitable for marshalling to JSON
 // for HTTP response bodies or CLI stdout.
+//
+// AIChange is embedded so the downstream BOM build can recover the exact
+// file set that drove the decision (without re-reading any external state).
 type Result struct {
-	PRID     string           `json:"pr_id"`
-	Actor    string           `json:"actor"`
-	Impact   classify.Impact  `json:"impact"`
-	Findings []scan.Finding   `json:"findings"`
-	Decision policy.Decision  `json:"decision"`
+	PRID     string             `json:"pr_id"`
+	Actor    string             `json:"actor"`
+	AIChange aichange.AIChange  `json:"ai_change"`
+	Impact   classify.Impact    `json:"impact"`
+	Findings []scan.Finding     `json:"findings"`
+	Decision policy.Decision    `json:"decision"`
 }
 
 // Run executes the full pipeline for a single AIChange:
@@ -76,6 +80,7 @@ func Run(
 	result := Result{
 		PRID:     ai.PRID,
 		Actor:    ai.Actor,
+		AIChange: ai,
 		Impact:   imp,
 		Findings: findings,
 		Decision: decision,

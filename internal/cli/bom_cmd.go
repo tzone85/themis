@@ -164,37 +164,22 @@ func buildBOMFromLedger(base, id, prID string) (bom.BOM, string, error) {
 
 	decisionEvent := events[decisionIdx]
 	var dPayload struct {
-		PRID     string          `json:"pr_id"`
-		Actor    string          `json:"actor"`
-		Impact   classify.Impact `json:"impact"`
-		Findings []scan.Finding  `json:"findings"`
-		Decision policy.Decision `json:"decision"`
+		PRID     string            `json:"pr_id"`
+		Actor    string            `json:"actor"`
+		AIChange aichange.AIChange `json:"ai_change"`
+		Impact   classify.Impact   `json:"impact"`
+		Findings []scan.Finding    `json:"findings"`
+		Decision policy.Decision   `json:"decision"`
 	}
 	if err := json.Unmarshal(decisionEvent.Payload, &dPayload); err != nil {
 		return bom.BOM{}, "", fmt.Errorf("parse DECISION_ISSUED payload: %w", err)
 	}
 
-	// Reconstruct AIChange from the corresponding IMPACT_CLASSIFIED if any,
-	// or synthesise a stub when not present. For now we surface what the
-	// decision payload carries; Plan 5 will augment with the original
-	// AIChange JSON via a content-addressed reference.
-	var aiChange aichange.AIChange
-	for i := decisionIdx - 1; i >= 0; i-- {
-		if events[i].Kind != "IMPACT_CLASSIFIED" {
-			continue
-		}
-		var ip struct {
-			PRID string `json:"pr_id"`
-		}
-		if err := json.Unmarshal(events[i].Payload, &ip); err == nil && ip.PRID == prID {
-			// We only have impact in IMPACT_CLASSIFIED; AIChange itself is
-			// not currently serialised into the ledger payload. Plan 5
-			// extends IMPACT_CLASSIFIED to embed the full AIChange.
-			aiChange.PRID = prID
-			aiChange.Actor = dPayload.Actor
-			break
-		}
-	}
+	// The AIChange is embedded in the DECISION_ISSUED payload (pipeline.Run
+	// writes it there). Fall back to a stub for ledgers written by older
+	// versions that did not include it — the PRID + Actor are always
+	// available from the decision payload itself.
+	aiChange := dPayload.AIChange
 	if aiChange.PRID == "" {
 		aiChange.PRID = prID
 		aiChange.Actor = dPayload.Actor
