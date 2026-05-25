@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,16 +32,4 @@ func newMCPCmd() *cobra.Command {
 	_ = cmd.MarkFlagRequired("base-url")
 	_ = cmd.MarkFlagRequired("tenant-id")
 	return cmd
-}
-
-// runMCP keeps the wiring testable: most clients call it via the cobra
-// command, but the test in cli/mcp_cmd_test.go drives it directly with an
-// in-process httptest server.
-func runMCP(ctx context.Context, baseURL, token, tenantID string, in *os.File, out *os.File) error {
-	srv := &mcp.Server{
-		BaseURL:  baseURL,
-		Token:    token,
-		TenantID: tenantID,
-	}
-	return srv.Run(ctx, in, out)
 }
