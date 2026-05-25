@@ -34,7 +34,7 @@ func newHeartbeatRunOnceCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "heartbeat: %d miss(es) recorded\n", misses)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "heartbeat: %d miss(es) recorded\n", misses)
 			return nil
 		},
 	}

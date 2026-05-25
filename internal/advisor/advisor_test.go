@@ -109,8 +109,16 @@ func TestBuildPrompt_Deterministic(t *testing.T) {
 		Impact:   classify.Impact{Kind: classify.KindDocOnly, Reason: "docs"},
 		Decision: policy.Decision{Verdict: policy.VerdictAllow, RuleName: "doc-only"},
 	}
-	if buildPrompt(in) != buildPrompt(in) {
-		t.Fatal("buildPrompt should be deterministic")
+	// Compare bytes of two independent constructions of the same Input —
+	// any non-determinism (map iteration, time.Now, …) would diverge here.
+	a := buildPrompt(in)
+	b := buildPrompt(Input{
+		PRID: "p", Actor: "a",
+		Impact:   classify.Impact{Kind: classify.KindDocOnly, Reason: "docs"},
+		Decision: policy.Decision{Verdict: policy.VerdictAllow, RuleName: "doc-only"},
+	})
+	if a != b {
+		t.Fatalf("buildPrompt non-deterministic:\n a=%q\n b=%q", a, b)
 	}
 }
 
