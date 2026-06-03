@@ -1,0 +1,36 @@
+# Keep the build context minimal: only what the Dockerfile actually
+# COPYs (go.mod/go.sum, cmd/, internal/, actions/) plus scripts/ for
+# the smoke harness.
+
+# Version control + CI metadata
+.git
+.gitignore
+.github
+
+# Coverage + local test output
+coverage.*
+*.out
+*.html
+
+# Docs — none of this affects the binary
+docs
+*.md
+!README.md
+!LICENSE
+!CHANGELOG.md
+!CONTRIBUTING.md
+!SECURITY.md
+!SUPPORT.md
+!CODE_OF_CONDUCT.md
+
+# Editor / OS
+.idea
+.vscode
+.DS_Store
+*.swp
+
+# Local builds + tooling state
+bin
+dist
+.cache
+.claude
