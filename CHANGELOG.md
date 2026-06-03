@@ -9,6 +9,34 @@ Source of truth for each entry below is the matching plan file in
 [`.claude/plans/`](.claude/plans/) and the commit history.
 
 
+## Unreleased — Production-readiness pass → v0.1.0
+
+**Added (Governance — Phase 1)**
+
+- `SECURITY.md` — disclosure path (GitHub Security Advisories +
+  fallback email), 90-day coordinated disclosure window, govulncheck
+  posture (advisory on PR/main, gating on tag), supply-chain
+  self-claims (cosign keyless + syft SBOM on releases).
+- `SUPPORT.md` — scope of bug / security / design / policy / feature
+  channels; response expectations; in/out-of-scope at v0.1.x; before-
+  opening-issue checklist; pointers to onboarding + cookbook + runbook.
+- `CODE_OF_CONDUCT.md` — adopts Contributor Covenant 2.1 *by
+  reference* (link to canonical text rather than verbatim copy);
+  conduct reporting routed to maintainer email; enforcement follows
+  Covenant Enforcement Guidelines verbatim.
+- `CONTRIBUTING.md` — local dev loop (`make build && make test`),
+  coverage gate (`scripts/cover_check.sh` + `coverage.thresholds.yaml`),
+  plan-flow conventions, conventional-commits spec, branch protection.
+
+**Notes**
+
+- Companion design spec:
+  `docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md`.
+- Phases 2-8 (versioning, container, release pipeline, ops docs, CI
+  hardening, docs sync, tag) land in subsequent commits before
+  `v0.1.0` is cut.
+
+
 ## Unreleased — Plan 18 (OIDC TokenStore + ChainStore)
 
 **Added**
