@@ -1,5 +1,11 @@
 # Themis
 
+[![CI](https://github.com/tzone85/themis/actions/workflows/ci.yml/badge.svg)](https://github.com/tzone85/themis/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/tzone85/themis?sort=semver)](https://github.com/tzone85/themis/releases/latest)
+[![Go](https://img.shields.io/github/go-mod/go-version/tzone85/themis)](https://go.dev)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![SLSA 3](https://img.shields.io/badge/SLSA-3-success)](https://slsa.dev)
+
 **A compliance gateway for AI-generated code.**
 
 Themis records and governs every change that AI coding tools (Claude Code, Cursor, GitHub Copilot, autonomous agents like [VXD](https://github.com/tzone85/vortex-dispatch)) make to your software. It captures *who* (which AI, which prompt, which human) changed *what* (which event contract, which service, which downstream consumer), proves it cryptographically (signed AI Bill of Materials per pull request, tamper-evident ledger), and stops changes that violate your policies before they merge.
