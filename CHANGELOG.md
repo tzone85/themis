@@ -9,32 +9,85 @@ Source of truth for each entry below is the matching plan file in
 [`.claude/plans/`](.claude/plans/) and the commit history.
 
 
-## Unreleased — Production-readiness pass → v0.1.0
+## v0.1.0 — 2026-06-03 — Production-readiness pass
 
-**Added (Governance — Phase 1)**
+First tagged release. Companion design spec:
+[`docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md`](docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md).
+
+**Added — Governance (Phase 1)**
 
 - `SECURITY.md` — disclosure path (GitHub Security Advisories +
   fallback email), 90-day coordinated disclosure window, govulncheck
   posture (advisory on PR/main, gating on tag), supply-chain
-  self-claims (cosign keyless + syft SBOM on releases).
-- `SUPPORT.md` — scope of bug / security / design / policy / feature
-  channels; response expectations; in/out-of-scope at v0.1.x; before-
-  opening-issue checklist; pointers to onboarding + cookbook + runbook.
+  self-claims.
+- `SUPPORT.md` — bug / security / design / policy / feature channels;
+  response expectations; in/out-of-scope at v0.1.x.
 - `CODE_OF_CONDUCT.md` — adopts Contributor Covenant 2.1 *by
-  reference* (link to canonical text rather than verbatim copy);
-  conduct reporting routed to maintainer email; enforcement follows
-  Covenant Enforcement Guidelines verbatim.
-- `CONTRIBUTING.md` — local dev loop (`make build && make test`),
-  coverage gate (`scripts/cover_check.sh` + `coverage.thresholds.yaml`),
-  plan-flow conventions, conventional-commits spec, branch protection.
+  reference* (no verbatim copy; avoids future-drift commits).
+- `CONTRIBUTING.md` — local dev loop, coverage gate, plan-flow,
+  conventional-commits spec, sensitive-surface guidance.
 
-**Notes**
+**Changed — Binary versioning (Phase 2)**
 
-- Companion design spec:
-  `docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md`.
-- Phases 2-8 (versioning, container, release pipeline, ops docs, CI
-  hardening, docs sync, tag) land in subsequent commits before
-  `v0.1.0` is cut.
+- `themis --version` widened from a single string to four fields:
+  `Version (commit X, built Y, go Z)`. `internal/cli.Version`/
+  `Commit`/`Date` are ldflag-injectable; `runtime.Version()` at print
+  time. `Makefile` builds with `-trimpath` + ldflag injection driven
+  by `git describe`.
+
+**Added — Container image (Phase 3)**
+
+- Multi-stage `Dockerfile`: `golang:1.26-alpine` builder →
+  `gcr.io/distroless/static-debian12:nonroot` runtime. CGO disabled,
+  `-trimpath -s -w`, image < 30 MB. Runs as UID:GID 65532:65532.
+- `scripts/docker_smoke.sh` builds the image, asserts size, runs
+  `--version`, runs `tenant init` against a host-mounted tmpdir.
+- `.dockerignore` minimises the build context.
+
+**Added — Release pipeline (Phase 4)**
+
+- `.goreleaser.yaml`: 6 binaries (linux/darwin/windows × amd64/arm64),
+  multi-arch GHCR image (linux/amd64 + linux/arm64 via
+  `docker_manifests`), SPDX SBOM per archive + per image (`syft`),
+  cosign keyless signature on `checksums.txt` + on each pushed image.
+- `.github/workflows/release.yml` triggers on `v*.*.*` tag push;
+  declares `contents/packages/id-token` permissions for keyless OIDC;
+  installs `cosign` + `syft`; runs **gating** `govulncheck` before
+  `goreleaser release --clean`.
+
+**Added — Ops docs (Phase 5)**
+
+- `docs/ops/deployment.md` — three install paths (container, signed
+  binary with `cosign verify-blob`, source), tenant bootstrap, systemd
+  + Compose units, Caddy / Nginx reverse-proxy, post-upgrade
+  verification, air-gapped notes.
+- `docs/ops/observability.md` — honest current state (the ledger is
+  the primary observability surface; structured logs are partial; no
+  `/metrics` or OTEL yet) plus the v0.2.0+ roadmap.
+- `docs/ops/backup-restore.md` — base-dir layout, snapshot strategy,
+  restore-from-ledger drill, retention.
+- `docs/ops/runbook.md` — 8 indexed incidents with symptom → quick
+  check → fix → escalation.
+
+**Changed — CI hardening (Phase 6)**
+
+- Both workflows pin every action to a 40-char commit SHA with
+  `# vN.N.N` comment.
+- `ci.yml` adds explicit `permissions: contents: read` (least
+  privilege). govulncheck stays advisory.
+- `release.yml` `govulncheck` runs gating; releases can't ship known-
+  vulnerable code.
+
+**Changed — Docs sync (Phase 7)**
+
+- `README.md` — new `Install` + `Verify a release` sections; status
+  bumped to `v0.1.0 cut 2026-06-03`; links to ops docs + governance.
+- `docs/stakeholders/README.md` — "What changed since 2026-05-22"
+  appendix; original briefs left frozen.
+- Obsidian vault (`Themis/`) — status rewrite on `Themis.md`; new
+  note `2026-06-03-themis-production-readiness.md`; `00-README.md`
+  re-mirrors the repo README; appendices on the three audience briefs
+  pointing to the new note.
 
 
 ## Unreleased — Plan 18 (OIDC TokenStore + ChainStore)

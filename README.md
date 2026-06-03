@@ -6,7 +6,47 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **Plans 1-18 shipped.** Foundations through OIDC; every trust-layer item from design spec §9 implemented; every deferred item from Plan 11 closed. Full plan-by-plan detail in [`CHANGELOG.md`](CHANGELOG.md); 30-minute walkthrough in [`docs/onboarding/README.md`](docs/onboarding/README.md).
+> **`v0.1.0` cut 2026-06-03.** Plans 1-18 shipped; full production-readiness pass landed (governance scaffolding, four-field `--version`, distroless container, goreleaser + cosign keyless + syft SBOM on tag, ops docs, CI hardening with SHA-pinned actions). Foundations through OIDC; every trust-layer item from design spec §9 implemented; every deferred item from Plan 11 closed. Full plan-by-plan detail in [`CHANGELOG.md`](CHANGELOG.md); 30-minute walkthrough in [`docs/onboarding/README.md`](docs/onboarding/README.md); operator install paths in [`docs/ops/deployment.md`](docs/ops/deployment.md).
+
+## Install
+
+Three install paths. Pick one. Full operator guide:
+[`docs/ops/deployment.md`](docs/ops/deployment.md).
+
+```bash
+# A. Container (recommended).
+docker pull ghcr.io/tzone85/themis:v0.1.0
+
+# B. Signed binary.
+VERSION=v0.1.0
+curl -sLo themis.tar.gz \
+  "https://github.com/tzone85/themis/releases/download/${VERSION}/themis_${VERSION#v}_linux_x86_64.tar.gz"
+tar -xzf themis.tar.gz && sudo install -m 0755 themis /usr/local/bin/themis
+
+# C. From source.
+git clone https://github.com/tzone85/themis && cd themis && make build
+```
+
+## Verify a release
+
+Every release is signed with [cosign keyless](https://docs.sigstore.dev/)
+via GitHub Actions OIDC and ships SPDX SBOMs (`syft`) per archive and
+per image. Before deploying:
+
+```bash
+# Container image.
+cosign verify ghcr.io/tzone85/themis:v0.1.0 \
+  --certificate-identity-regexp '^https://github.com/tzone85/themis/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Binary: verify the checksums file, then check the archive matches its line.
+cosign verify-blob \
+  --certificate checksums.txt.pem --signature checksums.txt.sig \
+  --certificate-identity-regexp '^https://github.com/tzone85/themis/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+grep themis_0.1.0_linux_x86_64.tar.gz checksums.txt | sha256sum -c
+```
 
 ## Quickstart
 
@@ -76,6 +116,8 @@ to ~360 lines and pushed the operator-facing content below the fold.
 - 📄 **[Executive summary](docs/superpowers/specs/2026-05-22-themis-exec-summary.md)** — one page.
 - 📄 **[Full design specification](docs/superpowers/specs/2026-05-22-themis-design.md)** — the canonical artefact.
 - 📁 **[Stakeholder briefs index](docs/stakeholders/README.md)** — compliance, engineering, security, exec, anchor pilot proposal.
+- 🛠 **[Operations](docs/ops/)** — [`deployment`](docs/ops/deployment.md), [`observability`](docs/ops/observability.md), [`backup-restore`](docs/ops/backup-restore.md), [`runbook`](docs/ops/runbook.md).
+- 🔐 **Governance** — [`SECURITY`](SECURITY.md), [`CONTRIBUTING`](CONTRIBUTING.md), [`SUPPORT`](SUPPORT.md), [`CODE_OF_CONDUCT`](CODE_OF_CONDUCT.md).
 
 ## About the name
 

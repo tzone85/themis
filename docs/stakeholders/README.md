@@ -26,3 +26,21 @@ All Themis documents (design spec + audience-specific briefs) live together unde
 | Anchor pilot proposal | Draft v1 | 2026-05-22 | Awaiting stakeholder review |
 
 All drafts are intended to be updated as feedback comes in. Each brief is < 10 minutes' reading time on its own.
+
+## What changed since 2026-05-22
+
+The briefs above are deliberately frozen — they are pitch artefacts;
+re-writing them invalidates the conversations they seeded. Status
+updates land separately:
+
+- **`v0.1.0` cut 2026-06-03.** All 18 implementation plans complete.
+  See [`CHANGELOG.md`](../../CHANGELOG.md) for the plan-by-plan history.
+- **Production-readiness pass** — design spec at
+  [`../superpowers/specs/2026-06-03-themis-production-readiness-design.md`](../superpowers/specs/2026-06-03-themis-production-readiness-design.md);
+  added governance scaffolding (SECURITY/SUPPORT/CoC/CONTRIBUTING),
+  signed multi-arch container image on `ghcr.io`, signed binary
+  releases with SPDX SBOMs, four ops docs under
+  [`../ops/`](../ops/).
+- **Verification path now operator-self-serve** — every release artefact
+  is `cosign verify`-able by anyone with cosign installed; see
+  [`../ops/deployment.md`](../ops/deployment.md).
