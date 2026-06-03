@@ -1,6 +1,11 @@
 module github.com/tzone85/themis
 
-go 1.26.4
+go 1.26.3
+
+// Toolchain pinned higher than the `go` directive so go select the patched
+// stdlib (1.26.4) at build time even when the host's setup-go has only the
+// 1.26.3 manifest entry. Cleared 2 stdlib vulns (GO-2026-5037/5039).
+toolchain go1.26.4
 
 require (
 	github.com/spf13/cobra v1.10.2
