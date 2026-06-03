@@ -11,7 +11,7 @@ Verified against `v0.1.0` on `2026-06-03`.
 docker run --rm \
   -v /var/lib/themis:/data \
   -p 127.0.0.1:8787:8787 \
-  ghcr.io/tzone85/themis:v0.1.0 \
+  ghcr.io/tzone85/themis:0.1.0 \
   serve --base /data --addr 0.0.0.0:8787
 ```
 
@@ -25,10 +25,10 @@ Three supported paths, in order of recommended preference.
 ### A. Container image (recommended)
 
 ```bash
-docker pull ghcr.io/tzone85/themis:v0.1.0
+docker pull ghcr.io/tzone85/themis:0.1.0
 
 # Verify the image signature before running it.
-cosign verify ghcr.io/tzone85/themis:v0.1.0 \
+cosign verify ghcr.io/tzone85/themis:0.1.0 \
   --certificate-identity-regexp '^https://github.com/tzone85/themis/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -163,7 +163,7 @@ sudo systemctl status themis
 # /etc/themis/docker-compose.yaml
 services:
   themis:
-    image: ghcr.io/tzone85/themis:v0.1.0
+    image: ghcr.io/tzone85/themis:0.1.0
     command: ["serve", "--base", "/data", "--addr", "0.0.0.0:8787"]
     user: "65532:65532"
     ports:

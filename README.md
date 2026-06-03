@@ -15,7 +15,7 @@ Three install paths. Pick one. Full operator guide:
 
 ```bash
 # A. Container (recommended).
-docker pull ghcr.io/tzone85/themis:v0.1.0
+docker pull ghcr.io/tzone85/themis:0.1.0
 
 # B. Signed binary.
 VERSION=v0.1.0
@@ -35,7 +35,7 @@ per image. Before deploying:
 
 ```bash
 # Container image.
-cosign verify ghcr.io/tzone85/themis:v0.1.0 \
+cosign verify ghcr.io/tzone85/themis:0.1.0 \
   --certificate-identity-regexp '^https://github.com/tzone85/themis/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
