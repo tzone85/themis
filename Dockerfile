@@ -10,8 +10,8 @@
 
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.26.1
-ARG ALPINE_VERSION=3.20
+ARG GO_VERSION=1.26.4
+ARG ALPINE_VERSION=3.22
 
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
