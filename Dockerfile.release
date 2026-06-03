@@ -1,0 +1,25 @@
+# Dockerfile.release — used by goreleaser only.
+#
+# goreleaser's docker build step sets the build context to
+# `dist/<id>_<os>_<arch>/`, which contains only the pre-built binary
+# (and whatever `extra_files` lists). That makes a from-source build
+# impossible from here.
+#
+# This file does the minimum: ship the binary on a distroless base.
+# The full from-source Dockerfile lives in `Dockerfile` (used by
+# `make build` and `scripts/docker_smoke.sh`).
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+LABEL org.opencontainers.image.title="themis" \
+      org.opencontainers.image.description="Compliance gateway for AI-generated code" \
+      org.opencontainers.image.source="https://github.com/tzone85/themis" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
+COPY themis /themis
+
+USER nonroot:nonroot
+
+EXPOSE 8787
+
+ENTRYPOINT ["/themis"]

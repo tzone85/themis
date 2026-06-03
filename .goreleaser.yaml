@@ -72,7 +72,7 @@ dockers:
   - id: themis-amd64
     goos: linux
     goarch: amd64
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.release
     image_templates:
       - "ghcr.io/tzone85/themis:{{ .Version }}-amd64"
     build_flag_templates:
@@ -88,7 +88,7 @@ dockers:
   - id: themis-arm64
     goos: linux
     goarch: arm64
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.release
     image_templates:
       - "ghcr.io/tzone85/themis:{{ .Version }}-arm64"
     build_flag_templates:
