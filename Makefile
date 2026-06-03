@@ -3,8 +3,19 @@
 BIN := ~/.local/bin/themis
 PKGS := ./...
 
+# Build identity — injected into internal/cli at link time so `themis
+# --version` carries semver, commit, and build date. A clean `go build`
+# (no ldflags) still works; the defaults in internal/cli/root.go take
+# over and the binary identifies itself as "dev (commit none, …)".
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+DATE    ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -X github.com/tzone85/themis/internal/cli.Version=$(VERSION) \
+           -X github.com/tzone85/themis/internal/cli.Commit=$(COMMIT) \
+           -X github.com/tzone85/themis/internal/cli.Date=$(DATE)
+
 build:
-	go build -o $(BIN) ./cmd/themis
+	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/themis
 
 test:
 	go test -race -count=1 $(PKGS)

@@ -2,13 +2,31 @@
 package cli
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/spf13/cobra"
 )
 
-// Version is the embedded build version. ldflags-injectable at build time:
+// Build metadata, injected at link time via ldflags. Defaults make a
+// `go build ./...` (without ldflags) still emit something honest.
 //
-//	go build -ldflags="-X github.com/tzone85/themis/internal/cli.Version=v0.1.0" ./cmd/themis
-var Version = "dev"
+//	go build -ldflags=" \
+//	  -X github.com/tzone85/themis/internal/cli.Version=v0.1.0 \
+//	  -X github.com/tzone85/themis/internal/cli.Commit=abc1234 \
+//	  -X github.com/tzone85/themis/internal/cli.Date=2026-06-03T12:34:56Z" \
+//	  ./cmd/themis
+var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+)
+
+// versionString renders the four-field build identity. Kept as a function
+// (not a const) so tests can swap Version/Commit/Date and observe.
+func versionString() string {
+	return fmt.Sprintf("%s (commit %s, built %s, %s)", Version, Commit, Date, runtime.Version())
+}
 
 // NewRootCmd constructs the root `themis` command tree.
 func NewRootCmd() *cobra.Command {
@@ -17,7 +35,7 @@ func NewRootCmd() *cobra.Command {
 		Short:         "Themis — a compliance gateway for AI-generated code",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Version:       Version,
+		Version:       versionString(),
 	}
 	root.SetVersionTemplate("themis {{.Version}}\n")
 	root.AddCommand(newTenantCmd())
