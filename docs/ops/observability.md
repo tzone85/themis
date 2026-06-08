@@ -103,4 +103,4 @@ events** (the JSON in `ledger.jsonl`):
 
 - [`runbook.md`](runbook.md) — common incidents and diagnosis steps.
 - [`backup-restore.md`](backup-restore.md) — what to snapshot.
-- Design spec §observability (`docs/superpowers/specs/2026-05-22-themis-design.md`).
+- Design spec §observability (`docs/design.md`).

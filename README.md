@@ -119,8 +119,8 @@ to ~360 lines and pushed the operator-facing content below the fold.
 - 📒 **[Cookbook](docs/onboarding/cookbook/README.md)** — 8 named recipes (locked-down policy, supply-chain, override, Sigstore-stub, OIDC chain, custom claim mapping, …), each citing the test that proves it.
 - 🧪 **[Exercises](docs/onboarding/exercises/README.md)** — 6 hands-on exercises with check commands.
 - 📜 **[Changelog](CHANGELOG.md)** — plan-by-plan history.
-- 📄 **[Executive summary](docs/superpowers/specs/2026-05-22-themis-exec-summary.md)** — one page.
-- 📄 **[Full design specification](docs/superpowers/specs/2026-05-22-themis-design.md)** — the canonical artefact.
+- 📄 **[Executive summary](docs/stakeholders/exec-summary.md)** — one page.
+- 📄 **[Full design specification](docs/design.md)** — the canonical artefact.
 - 📁 **[Stakeholder briefs index](docs/stakeholders/README.md)** — compliance, engineering, security, exec, anchor pilot proposal.
 - 🛠 **[Operations](docs/ops/)** — [`deployment`](docs/ops/deployment.md), [`observability`](docs/ops/observability.md), [`backup-restore`](docs/ops/backup-restore.md), [`runbook`](docs/ops/runbook.md).
 - 🔐 **Governance** — [`SECURITY`](SECURITY.md), [`CONTRIBUTING`](CONTRIBUTING.md), [`SUPPORT`](SUPPORT.md), [`CODE_OF_CONDUCT`](CODE_OF_CONDUCT.md).
@@ -163,7 +163,7 @@ Themis closes the gap: routine AI work flows automatically, contract-affecting w
 
 ## First pilot target
 
-An anchor regulated organisation (insurance / financial services, South Africa) — see [the anchor pilot proposal](docs/superpowers/specs/2026-05-22-themis-anchor-pilot-proposal.md) for scope, plan, exit criteria, and risk profile.
+An anchor regulated organisation (insurance / financial services, South Africa) — see [the anchor pilot proposal](docs/stakeholders/anchor-pilot-proposal.md) for scope, plan, exit criteria, and risk profile.
 
 ## Licence (planned)
 

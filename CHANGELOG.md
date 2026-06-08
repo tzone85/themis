@@ -11,8 +11,7 @@ Source of truth for each entry below is the matching plan file in
 
 ## v0.1.0 — 2026-06-03 — Production-readiness pass
 
-First tagged release. Companion design spec:
-[`docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md`](docs/superpowers/specs/2026-06-03-themis-production-readiness-design.md).
+First tagged release.
 
 **Added — Governance (Phase 1)**
 

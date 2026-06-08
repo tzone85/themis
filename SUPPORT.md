@@ -36,8 +36,7 @@ commercial side (per the design spec §16); contact via email.
 - Reproducible bug reports against `v0.1.x` on Linux, macOS, or
   Windows.
 - Security reports per [`SECURITY.md`](SECURITY.md).
-- Questions about the canonical design
-  (`docs/superpowers/specs/2026-05-22-themis-design.md`).
+- Questions about the canonical design (`docs/design.md`).
 - Questions about onboarding (`docs/onboarding/README.md`) and the
   cookbook (`docs/onboarding/cookbook/README.md`).
 - Questions about the policy YAML schema (`internal/policy/`).
@@ -67,5 +66,5 @@ commercial side (per the design spec §16); contact via email.
 - **Cookbook:** [`docs/onboarding/cookbook/README.md`](docs/onboarding/cookbook/README.md).
 - **Exercises:** [`docs/onboarding/exercises/README.md`](docs/onboarding/exercises/README.md).
 - **Runbook (operators):** [`docs/ops/runbook.md`](docs/ops/runbook.md).
-- **Design spec:** [`docs/superpowers/specs/2026-05-22-themis-design.md`](docs/superpowers/specs/2026-05-22-themis-design.md).
+- **Design spec:** [`docs/design.md`](docs/design.md).
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md).

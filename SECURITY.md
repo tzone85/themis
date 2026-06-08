@@ -137,5 +137,5 @@ and do not act on it.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to develop against Themis
   without leaking secrets.
 - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — community conduct.
-- [`docs/superpowers/specs/2026-05-22-themis-security-brief.md`](docs/superpowers/specs/2026-05-22-themis-security-brief.md)
+- [`docs/stakeholders/security-brief.md`](docs/stakeholders/security-brief.md)
   — the AppSec / security-engineering perspective on the product.

@@ -34,7 +34,7 @@ to your software:
 6. Reviewers grant or deny approvals; emergency overrides require a
    co-signer, a 50-character reason, and a 7-day post-mortem.
 
-The full design spec is in [`docs/superpowers/specs/2026-05-22-themis-design.md`](../superpowers/specs/2026-05-22-themis-design.md).
+The full design spec is in [`docs/design.md`](../design.md).
 
 ---
 
@@ -382,7 +382,7 @@ For external transparency anchoring:
 
 - Recipes: [`docs/onboarding/cookbook/README.md`](cookbook/README.md).
 - Hands-on exercises: [`docs/onboarding/exercises/README.md`](exercises/README.md).
-- Full design spec: [`docs/superpowers/specs/2026-05-22-themis-design.md`](../superpowers/specs/2026-05-22-themis-design.md).
+- Full design spec: [`docs/design.md`](../design.md).
 - Stakeholder briefs (compliance, security, exec): [`docs/stakeholders/`](../stakeholders/).
 - Plan history: every plan in [`.claude/plans/`](../../.claude/plans/) documents
   one shippable slice end-to-end.

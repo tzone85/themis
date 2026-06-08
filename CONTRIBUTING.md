@@ -6,8 +6,7 @@ This file covers what you need to know to land a change.
 
 ## Before you start
 
-1. Read the canonical design spec:
-   [`docs/superpowers/specs/2026-05-22-themis-design.md`](docs/superpowers/specs/2026-05-22-themis-design.md).
+1. Read the canonical design spec: [`docs/design.md`](docs/design.md).
 2. Read the changelog for the last few plans to see how recent changes
    landed: [`CHANGELOG.md`](CHANGELOG.md).
 3. Read the [`Code of Conduct`](CODE_OF_CONDUCT.md) (Contributor
@@ -66,7 +65,7 @@ so future regressions fail loudly.
 
 Non-trivial changes follow the plan flow:
 
-1. Open a plan document under [`docs/superpowers/plans/`](docs/superpowers/plans/)
+1. Open a plan document under [`docs/plans/`](docs/plans/)
    named `YYYY-MM-DD-<topic>.md`. Cover: goal, non-goals, design,
    testing approach, risks.
 2. Get the plan reviewed.
@@ -123,8 +122,8 @@ Scopes are the package or area: `ledger`, `bom`, `auth`, `cli`, `serve`,
 | [`internal/`](internal/) | Trust-critical packages: `ledger`, `bom`, `auth`, `policy`, `tenant`, `catalogue`, `classify`, `pipeline`, `sign`, `scan`, `mempalace`, `heartbeat`, `advisor`, `ingest`, `api`, `mcp`, `approvals`, `incidents`, `override`. Each has its own test files. |
 | [`actions/themis-check/`](actions/themis-check/) | GitHub Action wrapper for PR-time enforcement. |
 | [`docs/onboarding/`](docs/onboarding/) | Operator-facing tutorial + cookbook + exercises. |
-| [`docs/superpowers/specs/`](docs/superpowers/specs/) | Design specifications. |
-| [`docs/superpowers/plans/`](docs/superpowers/plans/) | Implementation plans (one per executed change set). |
+| [`docs/design.md`](docs/design.md) | Canonical design specification. |
+| [`docs/plans/`](docs/plans/) | Implementation plans (one per executed change set). |
 | [`docs/stakeholders/`](docs/stakeholders/) | Stakeholder briefs (compliance, engineering, security, exec, pilot proposal). |
 | [`docs/ops/`](docs/ops/) | Operations docs (deployment, observability, backup-restore, runbook). |
 
