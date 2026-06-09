@@ -33,6 +33,52 @@ tar -xzf themis.tar.gz && sudo install -m 0755 themis /usr/local/bin/themis
 git clone https://github.com/tzone85/themis && cd themis && make build
 ```
 
+## Platform Support
+
+Themis is a single static Go binary with no native dependencies, no tmux, no
+docker socket reads, and no `sh -c` shell-outs. It cross-compiles cleanly to
+every platform Go itself supports.
+
+| Platform | Build | CLI | Server (`themis serve`, `mcp`, `heartbeat`) |
+|----------|-------|-----|---------------------------------------------|
+| macOS (Apple Silicon, Intel) | native | yes | yes |
+| Linux (x86_64, arm64) | native, container, signed binary | yes | yes |
+| Windows 10/11 (native, no WSL) | `GOOS=windows go build` | yes | yes |
+| Windows + WSL2 (Ubuntu/Debian) | inside WSL | yes | yes |
+
+The only external tool Themis shells out to is `git` (for the ingest
+heuristic). On Windows install [Git for Windows](https://gitforwindows.org)
+and the bundled `git.exe` will be picked up from PATH automatically.
+
+### Windows install (native PowerShell, no WSL)
+
+```powershell
+# From source (Go 1.26+ required).
+go install github.com/tzone85/themis/cmd/themis@latest
+# Binary lands at %USERPROFILE%\go\bin\themis.exe — that directory is on
+# PATH by default if you installed Go via the official MSI.
+themis --version
+```
+
+State on Windows lives under `%USERPROFILE%\.themis\` by default (override
+with `--base` on any command). Signed `.zip` archives for Windows are
+attached to each [GitHub release](https://github.com/tzone85/themis/releases)
+alongside the existing Linux `.tar.gz` artifacts.
+
+### Windows install (WSL2)
+
+```powershell
+# In an elevated PowerShell, one time:
+wsl --install -d Ubuntu
+```
+
+```bash
+# Inside the Ubuntu WSL shell — same as the Linux path:
+sudo apt update && sudo apt install -y git build-essential
+go install github.com/tzone85/themis/cmd/themis@latest
+themis --version
+```
+
 ## Verify a release
 
 Every release is signed with [cosign keyless](https://docs.sigstore.dev/)
