@@ -46,6 +46,28 @@ make ci
 It runs `go vet`, `golangci-lint`, `go test -race`, the coverage gate,
 and `govulncheck` (in advisory mode locally — same as on PR/main).
 
+### Windows contributors
+
+Themis builds and runs natively on Windows — no WSL required. The
+`Makefile` assumes a POSIX shell, so use one of:
+
+- **WSL2 (recommended for hacking)** — clone inside the WSL filesystem and
+  run `make ci` exactly as documented above.
+- **PowerShell / cmd** — skip the Makefile and drive `go` directly:
+
+  ```powershell
+  go build -o $env:USERPROFILE\.local\bin\themis.exe .\cmd\themis
+  go test ./... -race -count=1
+  ```
+
+Cross-compile from any host to verify the Windows build is green:
+
+```bash
+GOOS=windows GOARCH=amd64 go build ./...
+```
+
+See the README's Platform Support section for the supported matrix.
+
 ## Coverage gate
 
 Coverage is enforced by [`scripts/cover_check.sh`](scripts/cover_check.sh)

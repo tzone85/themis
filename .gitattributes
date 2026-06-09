@@ -1,9 +1,27 @@
+# Force LF endings for source and config — keeps Go build tags, shell
+# scripts, and YAML parsers happy when the repo is cloned on Windows with
+# core.autocrlf=true.
 * text=auto eol=lf
-*.go text eol=lf
-*.md text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.json text eol=lf
-*.sh text eol=lf
-*.sum text eol=lf
-*.mod text eol=lf
+*.go        text eol=lf
+*.sh        text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+Makefile    text eol=lf
+go.mod      text eol=lf
+go.sum      text eol=lf
+LICENSE     text eol=lf
+
+# Windows-specific scripts keep their native CRLF.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binaries — never normalize.
+*.png       binary
+*.jpg       binary
+*.gif       binary
+*.exe       binary
+*.dll       binary
