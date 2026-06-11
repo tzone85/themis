@@ -12,7 +12,9 @@ Themis records and governs every change that AI coding tools (Claude Code, Curso
 
 ## Status
 
-> **`v0.1.0` cut 2026-06-03.** Plans 1-18 shipped; full production-readiness pass landed (governance scaffolding, four-field `--version`, distroless container, goreleaser + cosign keyless + syft SBOM on tag, ops docs, CI hardening with SHA-pinned actions). Foundations through OIDC; every trust-layer item from design spec §9 implemented; every deferred item from Plan 11 closed. Full plan-by-plan detail in [`CHANGELOG.md`](CHANGELOG.md); 30-minute walkthrough in [`docs/onboarding/README.md`](docs/onboarding/README.md); operator install paths in [`docs/ops/deployment.md`](docs/ops/deployment.md).
+> **`v0.1.0` cut 2026-06-03.** Plans 1-18 shipped; full production-readiness pass landed (governance scaffolding, four-field `--version`, distroless container, goreleaser + cosign keyless + syft SBOM on tag, ops docs, CI hardening with SHA-pinned actions). Foundations through OIDC; every trust-layer item from the design spec's Trust Story section implemented; every deferred item from Plan 11 closed.
+>
+> **2026-06-11 hardening pass** landed on `main` (unreleased): mempalace path-traversal fix, API tenant-id validation, git-arg-injection guard, `golang.org/x/sys` bump for GO-2026-5024, supply-chain pins (govulncheck@v1.3.0, distroless + golang:alpine by SHA digest). `govulncheck` clean. Coverage gate PASS at 88.0% global. See [`CHANGELOG.md`](CHANGELOG.md) for the full plan-by-plan history; 30-minute walkthrough in [`docs/onboarding/README.md`](docs/onboarding/README.md); operator install paths in [`docs/ops/deployment.md`](docs/ops/deployment.md).
 
 ## Install
 

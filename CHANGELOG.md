@@ -9,6 +9,64 @@ Source of truth for each entry below is the matching plan file in
 [`.claude/plans/`](.claude/plans/) and the commit history.
 
 
+## Unreleased — 2026-06-11 — Hardening pass
+
+Five sequential PRs land on `main` after a full audit. Every code change
+followed RED → GREEN TDD; coverage gate stayed PASS throughout
+(global 88.0% / target 87.0%).
+
+**Fixed — Path traversal in mempalace bridge (#5)**
+
+- `mempalace.Bridge.Write`/`Read`/`List` now validate every
+  caller-supplied path component (Kind, Tenant, explicit Key) against a
+  strict regex before touching the filesystem. The pre-change `// safe
+  key check` comment in `Read` was aspirational — the test surface
+  proved `Drawer{Kind: "..", …}` and `Key: "../escape"` actually wrote
+  files outside the wing dir. In production today the only caller is
+  `advise_cmd` with hardcoded kinds and a pre-validated tenant, so this
+  was a preventative fix, but the public package-level API now refuses
+  the shape entirely.
+- Grammar: Kind matches `^[a-z][a-z0-9-]{0,31}$`, Tenant matches the
+  DNS-label grammar `tenant.New()` enforces, Key (when explicit) must
+  be 64 lowercase hex chars.
+
+**Fixed — Defense-in-depth at API boundaries (#3, #4)**
+
+- `handleTenantRoute` runs `tenant.New(base, id)` on the URL-supplied
+  id BEFORE auth or any filesystem access. Mux already normalises `..`;
+  this gate catches uppercase, leading dash, dot, underscore, space,
+  control chars, oversized — six shapes covered by a new
+  `TestAPI_TenantRoute_RejectsMalformedID` table test.
+- `ingest.GitHeuristic` rejects option-shaped `--base-ref` values
+  (empty, `--`, anything starting with `-`) at the adapter boundary
+  before they reach `exec.Command("git", …)`. Adds new
+  `ErrInvalidBaseRef` sentinel so callers distinguish input rejection
+  from git-side failure. `git diff` invocation gains a trailing `--`
+  separator.
+
+**Changed — Supply-chain hardening (#2, #6)**
+
+- `golang.org/x/sys` v0.42.0 → v0.44.0. Clears GO-2026-5024 (integer
+  overflow in `NewNTUnicodeString`, Windows-only). Indirect dep, not
+  called by Themis code — but v0.1.0 declared native Windows support,
+  so Windows-only findings are now in scope for the release-gating
+  `govulncheck` job. `govulncheck ./...` now reports 0 findings.
+- `govulncheck` install pinned to `@v1.3.0` (was `@latest`) in
+  `ci.yml`, `release.yml`, and `Makefile` — a backdoored proxy push
+  can't silently degrade the scan.
+- `golang:1.26.4-alpine3.22` builder pinned by digest
+  `sha256:727cfc3c40be…` in `Dockerfile`.
+- `gcr.io/distroless/static-debian12:nonroot` pinned by digest
+  `sha256:d093aa3e30db…` in `Dockerfile` + `Dockerfile.release`.
+  Both files must move together when the distroless base is rotated.
+
+**Deferred — Tracked for v0.2**
+
+- `goreleaser check` warns `dockers` / `docker_manifests` are being
+  phased out in favour of `dockers_v2`. Current pipeline still works
+  on goreleaser v2.x.
+
+
 ## v0.1.0 — 2026-06-03 — Production-readiness pass
 
 First tagged release.
