@@ -128,6 +128,38 @@ func TestGitHeuristic_NotAGitRepo(t *testing.T) {
 	}
 }
 
+// TestGitHeuristic_RejectsOptionLikeBaseRef locks in defense-in-depth
+// against git argument injection: a --base-ref that starts with `-` (or
+// looks like an option flag) must be refused at the adapter boundary
+// BEFORE it reaches git. git itself happens to reject most of these
+// today, but relying on a downstream tool's error handling is fragile
+// — future git versions or subcommand changes could turn a rejected
+// flag into an accepted one.
+//
+// The assertion wraps both ErrAdapterFailed AND ErrInvalidBaseRef so
+// the test fails if validation is removed or git starts accepting the
+// flag silently.
+func TestGitHeuristic_RejectsOptionLikeBaseRef(t *testing.T) {
+	dir := setupGitRepo(t)
+	for _, bad := range []string{
+		"-HEAD",
+		"--upload-pack=evil",
+		"--exec-path=/tmp/evil",
+		"--",
+	} {
+		t.Run(bad, func(t *testing.T) {
+			_, err := (&GitHeuristic{}).Ingest(Inputs{
+				PRID:    "x",
+				Workdir: dir,
+				BaseRef: bad,
+			})
+			if !errors.Is(err, ErrInvalidBaseRef) {
+				t.Fatalf("baseref %q should ErrInvalidBaseRef, got %v", bad, err)
+			}
+		})
+	}
+}
+
 func TestGitHeuristic_RespectsActorOverride(t *testing.T) {
 	dir := setupGitRepo(t)
 	got, err := (&GitHeuristic{}).Ingest(Inputs{

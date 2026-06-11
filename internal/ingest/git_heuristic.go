@@ -3,6 +3,7 @@ package ingest
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,13 @@ import (
 
 	"github.com/tzone85/themis/internal/aichange"
 )
+
+// ErrInvalidBaseRef is returned when --base-ref looks like a git option
+// flag (e.g. "-HEAD", "--upload-pack=…"). Catching these at the adapter
+// boundary means we don't depend on git's own option parser to reject
+// them — future git versions or new global options can't widen the
+// surface silently.
+var ErrInvalidBaseRef = errors.New("ingest: invalid base ref")
 
 // GitHeuristic ingests an AIChange from a real git working tree by diffing
 // against a base ref. It's the universal adapter — even when no AI-specific
@@ -33,9 +41,15 @@ func (g *GitHeuristic) Ingest(in Inputs) (aichange.AIChange, error) {
 	if baseRef == "" {
 		baseRef = "HEAD~1"
 	}
+	if !safeGitRef(baseRef) {
+		return aichange.AIChange{}, fmt.Errorf("%w: base-ref %q: %w", ErrAdapterFailed, baseRef, ErrInvalidBaseRef)
+	}
 
-	// 1. List name-status entries.
-	diffOut, err := runGit(in.Workdir, "diff", "--name-status", "--no-renames", baseRef+"..HEAD")
+	// 1. List name-status entries. The `--` after refs is belt-and-braces:
+	// even with safeGitRef in place, the separator makes the rev/pathspec
+	// boundary explicit so a future caller can't accidentally widen the
+	// pathspec into the rev slot.
+	diffOut, err := runGit(in.Workdir, "diff", "--name-status", "--no-renames", baseRef+"..HEAD", "--")
 	if err != nil {
 		return aichange.AIChange{}, fmt.Errorf("%w: git diff: %v", ErrAdapterFailed, err)
 	}
@@ -161,6 +175,25 @@ func gitBlobHash(workdir, ref, path string) (string, error) {
 func runGit(workdir string, args ...string) (string, error) {
 	out, err := runGitBytes(workdir, args...)
 	return string(out), err
+}
+
+// safeGitRef rejects ref strings shaped like a git option flag. Refs
+// can legally contain a wide alphabet (slashes, dots, alnum, dashes
+// after the first char) but a leading `-` always means "option" to
+// git's argument parser. We also reject the literal `--` since it's
+// the rev/pathspec separator and has no business being a ref.
+//
+// We do NOT try to validate the full git refname grammar — git itself
+// enforces that. We just refuse the shapes that exec.Command's lack of
+// shell semantics doesn't protect against.
+func safeGitRef(ref string) bool {
+	if ref == "" || ref == "--" {
+		return false
+	}
+	if strings.HasPrefix(ref, "-") {
+		return false
+	}
+	return true
 }
 
 // runGitBytes is the byte-stream variant of runGit.
