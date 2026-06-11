@@ -51,9 +51,12 @@ jobs:
 
       # Release-gating govulncheck. Distinct from the advisory posture
       # in ci.yml — a release must not ship known-vulnerable code.
+      #
+      # Pin govulncheck to a tagged version so a backdoored @latest can't
+      # silently degrade the scan.
       - name: govulncheck (gating)
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
           govulncheck ./...
 
       - name: Run goreleaser

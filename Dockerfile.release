@@ -9,7 +9,9 @@
 # The full from-source Dockerfile lives in `Dockerfile` (used by
 # `make build` and `scripts/docker_smoke.sh`).
 
-FROM gcr.io/distroless/static-debian12:nonroot
+# Pinned by digest. Same digest as runtime stage in Dockerfile — both
+# files must move together when the distroless base is rotated.
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:d093aa3e30dbadd3efe1310db061a14da60299baff8450a17fe0ccc514a16639
 
 LABEL org.opencontainers.image.title="themis" \
       org.opencontainers.image.description="Compliance gateway for AI-generated code" \

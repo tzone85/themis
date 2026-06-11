@@ -13,7 +13,10 @@
 ARG GO_VERSION=1.26.4
 ARG ALPINE_VERSION=3.22
 
-FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
+# Pin builder by digest so a registry compromise can't substitute a
+# backdoored golang:alpine. Tag stays in the FROM line for grepability;
+# the digest is what actually drives the pull.
+FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION}@sha256:727cfc3c40be55cd1bc9a4a059406b28a059857e3be752aa9d09531e12c20c56 AS builder
 
 # git is required by `go build` only when the build references a VCS
 # (it's also nice for `git describe` if the build is driven inside the
@@ -52,7 +55,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -o /out/themis ./cmd/themis
 
 
-FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:d093aa3e30dbadd3efe1310db061a14da60299baff8450a17fe0ccc514a16639 AS runtime
 
 # Image labels are picked up by `docker inspect` and rendered on the
 # GitHub Container Registry package page.
