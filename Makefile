@@ -34,7 +34,7 @@ vet:
 	go vet $(PKGS)
 
 vulncheck:
-	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
 	govulncheck $(PKGS)
 
 # vulncheck-advisory runs the same scan but does not fail the build —
@@ -42,7 +42,7 @@ vulncheck:
 # bumping the Go toolchain on the host) doesn't block local development.
 # Run `make vulncheck` standalone to gate releases.
 vulncheck-advisory:
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
 	@govulncheck $(PKGS) || echo "[vulncheck] ADVISORY: vulnerabilities reported (see above); upgrade the Go toolchain to clear stdlib findings."
 
 ci: vet lint test cover vulncheck-advisory

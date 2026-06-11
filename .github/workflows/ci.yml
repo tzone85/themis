@@ -43,7 +43,10 @@ jobs:
         # Advisory on PR/main — does not fail the build on stdlib-only findings.
         # Mirrors `make vulncheck-advisory`. The release workflow runs the same
         # check *gating* so vulnerable code can't ship.
+        #
+        # Pin govulncheck to a tagged version so a backdoored @latest can't
+        # silently degrade the scan.
         continue-on-error: true
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
           govulncheck ./...
