@@ -10,6 +10,7 @@ import (
 
 	"github.com/tzone85/themis/internal/auth"
 	"github.com/tzone85/themis/internal/ledger"
+	"github.com/tzone85/themis/internal/tenant"
 )
 
 // Version is the embedded server build version. ldflags-injectable so the
@@ -119,6 +120,16 @@ func (s *server) handleTenantRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, action := parts[0], parts[1]
+
+	// Defense-in-depth: reject malformed tenant IDs at the route boundary
+	// before auth or filesystem access. Go's mux normalises `..` so true
+	// path traversal is already blocked; this gate catches anything else
+	// the tenant validID regex would reject (uppercase, leading dash,
+	// dots, oversized, control chars, …).
+	if _, err := tenant.New(s.base, id); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid tenant id")
+		return
+	}
 
 	// Role required per action. Empty string = "any valid token".
 	minRole := actionMinRole(action, r.Method)

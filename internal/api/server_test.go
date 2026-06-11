@@ -257,3 +257,31 @@ func TestAPI_UnknownTenantAction_Is404(t *testing.T) {
 		t.Fatalf("status = %d, want 404", status)
 	}
 }
+
+// TestAPI_TenantRoute_RejectsMalformedID locks in defense-in-depth: a
+// malformed tenant ID (uppercase, leading dash, dot, oversized, …) must
+// be rejected at the route boundary BEFORE the auth check touches the
+// filesystem. Go's mux normalises `..` so true path traversal is already
+// blocked; this gate covers everything else the validID regex catches.
+func TestAPI_TenantRoute_RejectsMalformedID(t *testing.T) {
+	base, _, _, _, token := seedTenantState(t)
+	srv, c := newClient(t, base)
+	for _, bad := range []string{
+		"ACME",                  // uppercase
+		"-acme",                 // leading dash
+		"acme.corp",             // dot
+		"acme_corp",             // underscore
+		"acme corp",             // space (url-encoded by the server)
+		string(make([]byte, 64)) + "x", // > 63 chars
+	} {
+		t.Run(bad, func(t *testing.T) {
+			// url.PathEscape so URL parsers in mux see the raw bytes,
+			// not a 400 from net/url parse.
+			status, _ := doReq(t, c, http.MethodGet,
+				srv.URL+"/v1/tenants/"+url.PathEscape(bad)+"/health", token)
+			if status != http.StatusBadRequest {
+				t.Fatalf("malformed id %q: status = %d, want 400", bad, status)
+			}
+		})
+	}
+}
