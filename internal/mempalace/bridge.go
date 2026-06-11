@@ -18,8 +18,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
+
+// validKind constrains drawer kinds to a portable, filesystem-safe
+// subset: lowercase letters, digits, dash, 1-32 chars. Mirrors the
+// shape of the on-disk tenant id so the two filesystem-component
+// validators share a mental model.
+var validKind = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
+
+// validTenant matches the tenant.validID grammar locally. We don't
+// import the tenant package here to keep mempalace a leaf — it has no
+// business knowing the per-customer isolation type, only that the
+// string is filesystem-safe.
+var validTenant = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62})$`)
+
+// validKey accepts only hex-sha256 strings (the content-addressed
+// shape Write produces internally). Explicit keys must match — that's
+// the only way to safely thread caller-supplied keys into the path.
+var validKey = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 // Drawer is one persisted memory record. The Themis bridge writes drawers
 // of two kinds — decision and bom — but the type is generic so future
@@ -63,9 +81,17 @@ func (b *Bridge) Write(d Drawer) (string, error) {
 	if len(d.Body) == 0 {
 		return "", fmt.Errorf("%w: body required", ErrInvalidInput)
 	}
+	if !validKind.MatchString(d.Kind) {
+		return "", fmt.Errorf("%w: kind %q must match %s", ErrInvalidInput, d.Kind, validKind.String())
+	}
+	if !validTenant.MatchString(d.Tenant) {
+		return "", fmt.Errorf("%w: tenant %q must match %s", ErrInvalidInput, d.Tenant, validTenant.String())
+	}
 	if d.Key == "" {
 		sum := sha256.Sum256(d.Body)
 		d.Key = hex.EncodeToString(sum[:])
+	} else if !validKey.MatchString(d.Key) {
+		return "", fmt.Errorf("%w: key %q must be 64 lowercase hex chars", ErrInvalidInput, d.Key)
 	}
 	if d.WrittenAt.IsZero() {
 		d.WrittenAt = time.Now().UTC()
@@ -88,8 +114,17 @@ func (b *Bridge) Write(d Drawer) (string, error) {
 
 // Read returns the drawer at WingDir/<kind>/<key>.json.
 func (b *Bridge) Read(tenantID, kind, key string) (Drawer, error) {
+	if !validTenant.MatchString(tenantID) {
+		return Drawer{}, fmt.Errorf("%w: tenant %q", ErrInvalidInput, tenantID)
+	}
+	if !validKind.MatchString(kind) {
+		return Drawer{}, fmt.Errorf("%w: kind %q", ErrInvalidInput, kind)
+	}
+	if !validKey.MatchString(key) {
+		return Drawer{}, fmt.Errorf("%w: key %q must be 64 lowercase hex chars", ErrInvalidInput, key)
+	}
 	path := filepath.Join(b.WingDir(tenantID), kind, key+".json")
-	raw, err := os.ReadFile(path) // #nosec G304 -- tenant-scoped path with safe key check.
+	raw, err := os.ReadFile(path) // #nosec G304 -- all three components validated above.
 	if err != nil {
 		return Drawer{}, err
 	}
@@ -103,6 +138,12 @@ func (b *Bridge) Read(tenantID, kind, key string) (Drawer, error) {
 // List enumerates the keys for a kind. Empty slice when the directory is
 // missing.
 func (b *Bridge) List(tenantID, kind string) ([]string, error) {
+	if !validTenant.MatchString(tenantID) {
+		return nil, fmt.Errorf("%w: tenant %q", ErrInvalidInput, tenantID)
+	}
+	if !validKind.MatchString(kind) {
+		return nil, fmt.Errorf("%w: kind %q", ErrInvalidInput, kind)
+	}
 	dir := filepath.Join(b.WingDir(tenantID), kind)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
